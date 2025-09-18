@@ -1,0 +1,187 @@
+{
+  "globals": {
+    "theme": {
+      "palette": {
+        "primary": "#7C3AED",
+        "accent": "#EC4899",
+        "surface": "#0B1120",
+        "muted": "#A5B4FC",
+        "danger": "#F97316"
+      },
+      "font": "'Fira Code', ui-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+      "margins": 16,
+      "gap": 12,
+      "layout": "stack"
+    },
+    "defaults": {
+      "w": 12,
+      "h": 2,
+      "classes": ""
+    }
+  },
+  "elements": [
+    {
+      "id": "altNavbar",
+      "type": "navbar",
+      "label": "Alternate UI",
+      "side": "top",
+      "defaults": { "presentation": "notification", "timeoutMs": 3200 },
+      "elements": [
+        {
+          "id": "navAltMain",
+          "type": "button",
+          "label": "Main layout",
+          "command": {
+            "server": {
+              "id": "navAltMain",
+              "template": "echo 'Switching to main layout'"
+            },
+            "client": {
+              "loadConfig": {
+                "useDefault": true,
+                "label": "Default interface",
+                "loadingMessage": "Restoring default controls…"
+              }
+            }
+          }
+        },
+        {
+          "id": "navAltAlt",
+          "type": "button",
+          "label": "Alternate layout",
+          "tooltip": "Reload this stacked layout",
+          "bg": "rgba(236, 72, 153, 0.18)",
+          "color": "#EC4899",
+          "command": {
+            "server": {
+              "id": "navAltAlt",
+              "template": "echo 'Reloading alternate layout'"
+            },
+            "client": {
+              "loadConfig": {
+                "name": "ui.alt",
+                "label": "Alternate interface",
+                "loadingMessage": "Loading alternate interface…"
+              }
+            }
+          }
+        },
+        {
+          "id": "navAltOps",
+          "type": "button",
+          "label": "Ops board",
+          "command": {
+            "server": {
+              "id": "navAltOps",
+              "template": "echo 'Switching to operations board'"
+            },
+            "client": {
+              "loadConfig": {
+                "name": "ui.ops",
+                "label": "Operations board",
+                "loadingMessage": "Opening operations board…"
+              }
+            }
+          }
+        },
+        {
+          "id": "navAltDiagnostics",
+          "type": "button",
+          "label": "Diagnostics",
+          "command": {
+            "server": {
+              "id": "navAltDiagnostics",
+              "template": "echo 'Switching to diagnostics interface'"
+            },
+            "client": {
+              "loadConfig": {
+                "name": "ui.diagnostics",
+                "label": "Diagnostics interface",
+                "loadingMessage": "Loading diagnostics tools…"
+              }
+            }
+          }
+        },
+        {
+          "id": "navAltMedia",
+          "type": "button",
+          "label": "Media deck",
+          "command": {
+            "server": {
+              "id": "navAltMedia",
+              "template": "echo 'Switching to media deck'"
+            },
+            "client": {
+              "loadConfig": {
+                "name": "ui.media",
+                "label": "Media control deck",
+                "loadingMessage": "Loading media controls…"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "altGroup",
+      "type": "group",
+      "label": "System overview",
+      "layout": "grid",
+      "border": true,
+      "columns": 2,
+      "elements": [
+        {
+          "id": "altFetch",
+          "type": "output",
+          "label": "Fastfetch",
+          "mode": "manual",
+          "presentation": "inline",
+          "command": {
+            "server": { "id": "fastfetch", "template": "fastfetch --logo none" }
+          },
+          "onDemandButtonLabel": "Run fastfetch",
+          "w": 1
+        },
+        {
+          "id": "altEnv",
+          "type": "output",
+          "label": "Environment snapshot",
+          "mode": "manual",
+          "presentation": "inline",
+          "command": {
+            "server": { "id": "printEnv", "template": "env" }
+          },
+          "onDemandButtonLabel": "Show env",
+          "w": 1
+        },
+        {
+          "id": "altVolume",
+          "type": "stepper",
+          "label": "Volume",
+          "min": 0,
+          "max": 150,
+          "step": 5,
+          "value": 75,
+          "command": {
+            "server": { "id": "setVol", "template": "pactl set-sink-volume @DEFAULT_SINK@ ${value}%" }
+          },
+          "w": 1
+        },
+        {
+          "id": "altMute",
+          "type": "toggle",
+          "label": "Mute",
+          "initial": false,
+          "onCommand": {
+            "server": { "id": "mute", "template": "pactl set-sink-mute @DEFAULT_SINK@ 1" }
+          },
+          "offCommand": {
+            "server": { "id": "unmute", "template": "pactl set-sink-mute @DEFAULT_SINK@ 0" }
+          },
+          "w": 1
+        }
+      ]
+    }
+  ],
+  "whitelist": ["env", "fastfetch", "pactl"]
+}

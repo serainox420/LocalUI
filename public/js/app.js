@@ -8,7 +8,10 @@ if (!configEl || !root) {
 } else {
   try {
     const config = JSON.parse(configEl.textContent || '{}');
-    initializeApp(root, config);
+    const app = initializeApp(root, config);
+    if (app) {
+      window.localUI = app;
+    }
   } catch (error) {
     console.error('Invalid UI config', error);
   }
