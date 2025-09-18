@@ -134,29 +134,6 @@ Create `config/ui.json` following the structure below. Each element describes a 
   - `"defaults"` — merged into every navbar item, useful for setting a shared presentation mode or timeout.
 - The layout automatically adds body padding so the navbar does not obscure the main grid.
 
-### Loading alternate configurations
-
-- Buttons can seamlessly swap the active interface without reloading the page by declaring a `command.client.loadConfig` property.
-- Provide either a string (`"ui.alt"`) or an object with extra metadata. The name is resolved relative to the `config/` directory and the `.json` extension is optional.
-- Example:
-  ```json
-  {
-    "id": "navSwitchUi",
-    "type": "button",
-    "label": "Alternate layout",
-    "command": {
-      "client": {
-        "loadConfig": {
-          "name": "ui.alt",
-          "label": "Alternate interface",
-          "loadingMessage": "Loading alternate interface…"
-        }
-      }
-    }
-  }
-  ```
-- To return to the default `config/ui.json`, set `"loadConfig": { "useDefault": true }` or use an empty string. A full-screen loading overlay temporarily hides the existing controls while the new layout downloads and renders.
-
 ## Notes
 - Only binaries listed in `whitelist` are executed. The server resolves binaries via the `PATH` environment.
 - Arguments with forbidden shell metacharacters are rejected before execution.

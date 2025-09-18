@@ -266,11 +266,18 @@ class Elements
 
         $normalized = ['server' => $server];
         if (isset($wrapper['client'])) {
-            $script = (string) ($wrapper['client']['script'] ?? '');
-            if ($script === '') {
-                throw new InvalidArgumentException('Client script cannot be empty for element ' . $elementId);
+            $client = $wrapper['client'];
+            $script = null;
+
+            if (is_array($client) && array_key_exists('script', $client)) {
+                $script = trim((string) $client['script']);
+            } elseif (is_string($client)) {
+                $script = trim($client);
             }
-            $normalized['client'] = ['script' => $script];
+
+            if ($script !== null && $script !== '') {
+                $normalized['client'] = ['script' => $script];
+            }
         }
 
         return $normalized;

@@ -26,7 +26,13 @@ export function initializeApp(root, initialConfig) {
     loadConfig: handleLoadConfig,
   });
 
-  applyConfig(initialConfig);
+  const globals = config.globals || {};
+  const rootLayout = setupLayout(root, globals);
+  const rootContext = { layout: rootLayout, globals, root };
+
+  (config.elements || []).forEach((element) => {
+    renderer.renderEntity(element, root, rootContext);
+  });
 
   window.addEventListener('beforeunload', () => {
     state.stopAllPolls();
