@@ -17,31 +17,26 @@
   const views = new Map();
   const overlay = createOverlayManager();
 
-  setupLayout(root, config.globals);
+  const globals = config.globals || {};
+  const rootLayout = setupLayout(root, globals);
+  const rootContext = { layout: rootLayout, globals };
 
   (config.elements || []).forEach((element) => {
-    const card = buildCard(element);
-    root.appendChild(card);
-    hydrate(element.id);
-
-    if (element.type === 'output' && element.mode === 'poll' && element.command?.server) {
-      const interval = Number(element.intervalMs) || 5000;
-      const timer = setInterval(() => {
-        runServerCommand(element.id, element.command.server, { value: element.value });
-      }, interval);
-      polls.set(element.id, timer);
-      runServerCommand(element.id, element.command.server, { value: element.value });
-    }
+    renderEntity(element, root, rootContext);
   });
 
   window.addEventListener('beforeunload', () => {
     polls.forEach((timer) => clearInterval(timer));
   });
 
+  function normalizeLayout(value) {
+    return value === 'grid' ? 'grid' : 'stack';
+  }
+
   function setupLayout(container, globals = {}) {
     container.className = '';
     const theme = globals.theme || {};
-    const layout = theme.layout || 'grid';
+    const layout = normalizeLayout(theme.layout);
     const gap = theme.gap ?? 8;
     const margin = theme.margins ?? 12;
 
@@ -50,8 +45,142 @@
     } else {
       container.classList.add('flex', 'flex-col');
     }
+    container.dataset.layout = layout;
     container.style.gap = `${gap}px`;
     container.style.padding = `${margin}px`;
+    return layout;
+  }
+
+  function renderEntity(entity, container, context) {
+    if (!entity || typeof entity !== 'object') {
+      return;
+    }
+
+    const parentLayout = context?.layout || 'grid';
+
+    if (entity.type === 'group') {
+      const group = buildGroup(entity, context);
+      applyPlacement(group.node, entity, parentLayout);
+      container.appendChild(group.node);
+      const nextContext = { layout: group.layout, globals: context?.globals };
+      (entity.elements || []).forEach((child) => {
+        renderEntity(child, group.body, nextContext);
+      });
+      return;
+    }
+
+    const card = buildCard(entity);
+    applyPlacement(card, entity, parentLayout);
+    container.appendChild(card);
+    activateElement(entity);
+  }
+
+  function buildGroup(group, context) {
+    const section = document.createElement('section');
+    section.dataset.groupId = group.id;
+    section.className = 'component-group flex flex-col gap-4';
+    if (group.classes) {
+      section.className += ` ${group.classes}`;
+    }
+
+    let pane = false;
+    if (typeof group.border === 'string' && group.border.trim() !== '') {
+      section.style.border = group.border.trim();
+      pane = true;
+    } else if (group.border) {
+      pane = true;
+    } else if (group.border === false) {
+      section.style.border = 'none';
+    }
+    if (pane) {
+      section.classList.add('component-group-pane');
+    }
+
+    if (group.background) {
+      section.style.background = group.background;
+    }
+    if (group.font) {
+      section.style.fontFamily = group.font;
+    }
+    if (group.color) {
+      section.style.color = group.color;
+    }
+
+    if (group.label) {
+      const header = document.createElement('header');
+      header.className = 'component-group-header';
+      header.textContent = group.label;
+      section.appendChild(header);
+    }
+
+    const body = document.createElement('div');
+    body.className = 'component-group-body';
+    const layout = normalizeLayout(group.layout);
+    body.dataset.layout = layout;
+
+    if (layout === 'grid') {
+      body.classList.add('grid', 'auto-rows-min');
+      const columns = Math.max(1, Number(group.columns) || 0);
+      body.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`;
+    } else {
+      body.classList.add('flex', 'flex-col');
+    }
+
+    const gapSource = group.gap ?? context?.globals?.theme?.gap ?? 8;
+    const gapValue = Number(gapSource);
+    if (Number.isFinite(gapValue)) {
+      body.style.gap = `${gapValue}px`;
+    }
+
+    section.appendChild(body);
+    return { node: section, body, layout };
+  }
+
+  function applyPlacement(node, item, parentLayout) {
+    if (!node || !item || parentLayout !== 'grid') {
+      if (node) {
+        node.style.removeProperty('grid-column-start');
+        node.style.removeProperty('grid-column-end');
+        node.style.removeProperty('grid-row-start');
+        node.style.removeProperty('grid-row-end');
+      }
+      return;
+    }
+
+    const spanW = Math.max(1, Number(item.w) || 0);
+    const spanH = Math.max(1, Number(item.h) || 0);
+    node.style.gridColumnEnd = `span ${spanW}`;
+    node.style.gridRowEnd = `span ${spanH}`;
+
+    const column = Number(item.x);
+    if (item.x != null && Number.isFinite(column)) {
+      node.style.gridColumnStart = column + 1;
+    } else {
+      node.style.removeProperty('grid-column-start');
+    }
+
+    const row = Number(item.y);
+    if (item.y != null && Number.isFinite(row)) {
+      node.style.gridRowStart = row + 1;
+    } else {
+      node.style.removeProperty('grid-row-start');
+    }
+  }
+
+  function activateElement(element) {
+    hydrate(element.id);
+
+    if (element.type === 'output' && element.mode === 'poll' && element.command?.server) {
+      const interval = Number(element.intervalMs) || 5000;
+      if (polls.has(element.id)) {
+        clearInterval(polls.get(element.id));
+      }
+      const timer = setInterval(() => {
+        runServerCommand(element.id, element.command.server, { value: element.value });
+      }, interval);
+      polls.set(element.id, timer);
+      runServerCommand(element.id, element.command.server, { value: element.value });
+    }
   }
 
   function buildCard(element) {
@@ -61,10 +190,6 @@
     if (element.classes) {
       section.className += ` ${element.classes}`;
     }
-    const spanW = element.w || 12;
-    const spanH = element.h || 1;
-    section.style.gridColumn = `span ${spanW} / span ${spanW}`;
-    section.style.gridRow = `span ${spanH} / span ${spanH}`;
     if (element.bg) section.style.backgroundColor = element.bg;
     if (element.color) section.style.color = element.color;
     if (element.font) section.style.fontFamily = element.font;
