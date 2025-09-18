@@ -8,13 +8,13 @@ class Defaults
             'globals' => [
                 'theme' => [
                     'palette' => [
-                        'primary' => '#111827',
-                        'accent' => '#10B981',
-                        'surface' => '#F8FAFC',
-                        'muted' => '#64748B',
-                        'danger' => '#DC2626',
+                        'primary' => '#4338CA',
+                        'accent' => '#0EA5E9',
+                        'surface' => '#020817',
+                        'muted' => '#94A3B8',
+                        'danger' => '#F87171',
                     ],
-                    'font' => 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    'font' => 'Roboto, "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
                     'margins' => 12,
                     'gap' => 8,
                     'layout' => 'grid',
