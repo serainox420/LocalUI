@@ -28,6 +28,21 @@
           "command": { "server": { "id": "fastfetchQuick", "template": "fastfetch --logo none" } }
         },
         {
+          "id": "navSwitchUi",
+          "type": "button",
+          "label": "Alternate layout",
+          "tooltip": "Load another interface without reloading",
+          "command": {
+            "client": {
+              "loadConfig": {
+                "name": "ui.alt",
+                "label": "Alternate interface",
+                "loadingMessage": "Loading alternate interface…"
+              }
+            }
+          }
+        },
+        {
           "id": "navViewFile",
           "type": "input",
           "label": "Preview file",

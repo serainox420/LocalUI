@@ -1,6 +1,6 @@
 import { normalizeLayout } from './layout.js';
 
-export function createRenderer({ state, createResultView, playElementSound, server }) {
+export function createRenderer({ state, createResultView, playElementSound, server, loadConfig }) {
   const { polls, views, elementIndex } = state;
   const { runServerCommand, hydrate, executeClientScript } = server;
   const navbarHosts = new Map();
@@ -414,6 +414,13 @@ export function createRenderer({ state, createResultView, playElementSound, serv
         if (element.command?.client?.script) {
           executeClientScript(element, element.command.client.script);
         }
+        if (
+          loadConfig &&
+          element.command?.client &&
+          Object.prototype.hasOwnProperty.call(element.command.client, 'loadConfig')
+        ) {
+          await loadConfig(element, element.command.client.loadConfig);
+        }
       } catch (error) {
         // already shown to user
       }
@@ -583,5 +590,30 @@ export function createRenderer({ state, createResultView, playElementSound, serv
     return button;
   }
 
-  return { renderEntity };
+  function reset() {
+    if (navbarResizeObserver) {
+      navbarResizeObserver.disconnect();
+      navbarResizeObserver = null;
+    }
+
+    if (navbarResizeHandlerAttached) {
+      window.removeEventListener('resize', updateBodyPadding);
+      navbarResizeHandlerAttached = false;
+    }
+
+    navbarHosts.forEach((host) => {
+      host.remove();
+    });
+    navbarHosts.clear();
+
+    const body = document.body;
+    if (body) {
+      body.style.paddingTop = '';
+      body.style.paddingBottom = '';
+      body.style.paddingLeft = '';
+      body.style.paddingRight = '';
+    }
+  }
+
+  return { renderEntity, reset };
 }
