@@ -15,103 +15,176 @@
   },
   "elements": [
     {
-      "id": "uptimeInfo",
-      "type": "button",
-      "label": "Check uptime",
-      "tooltip": "Shows the uptime as a toast notification",
-      "command": { "server": { "id": "uptime", "template": "uptime" } },
-      "presentation": "notification",
-      "timeoutMs": 4000
+      "id": "systemControls",
+      "type": "group",
+      "label": "System controls",
+      "w": 6,
+      "h": 4,
+      "x": 0,
+      "y": 0,
+      "columns": 6,
+      "gap": 12,
+      "border": true,
+      "background": "rgba(15, 23, 42, 0.45)",
+      "elements": [
+        {
+          "id": "uptimeInfo",
+          "type": "button",
+          "label": "Check uptime",
+          "tooltip": "Shows the uptime as a toast notification",
+          "command": { "server": { "id": "uptime", "template": "uptime" } },
+          "presentation": "notification",
+          "timeoutMs": 4000,
+          "w": 3,
+          "h": 2,
+          "x": 0,
+          "y": 0
+        },
+        {
+          "id": "mute",
+          "type": "toggle",
+          "label": "Mute",
+          "onCommand": { "server": { "id": "mute", "template": "pactl set-sink-mute @DEFAULT_SINK@ 1" } },
+          "offCommand": { "server": { "id": "unmute", "template": "pactl set-sink-mute @DEFAULT_SINK@ 0" } },
+          "initial": false,
+          "presentation": "inline",
+          "timeoutMs": 0,
+          "w": 3,
+          "h": 2,
+          "x": 3,
+          "y": 0
+        },
+        {
+          "id": "stepVol",
+          "type": "stepper",
+          "label": "Volume",
+          "min": 0,
+          "max": 150,
+          "step": 5,
+          "value": 50,
+          "command": { "server": { "id": "setVol", "template": "pactl set-sink-volume @DEFAULT_SINK@ ${value}%" } },
+          "presentation": "popover",
+          "timeoutMs": 5000,
+          "w": 6,
+          "h": 2,
+          "x": 0,
+          "y": 2
+        }
+      ]
     },
     {
-      "id": "mute",
-      "type": "toggle",
-      "label": "Mute",
-      "onCommand": { "server": { "id": "mute", "template": "pactl set-sink-mute @DEFAULT_SINK@ 1" } },
-      "offCommand": { "server": { "id": "unmute", "template": "pactl set-sink-mute @DEFAULT_SINK@ 0" } },
-      "initial": false,
-      "presentation": "inline",
-      "timeoutMs": 0
+      "id": "inputPane",
+      "type": "group",
+      "label": "File tools",
+      "w": 6,
+      "h": 4,
+      "x": 6,
+      "y": 0,
+      "columns": 6,
+      "gap": 12,
+      "border": "1px solid rgba(148, 163, 184, 0.35)",
+      "background": "rgba(15, 23, 42, 0.32)",
+      "elements": [
+        {
+          "id": "inpFile",
+          "type": "input",
+          "label": "File path",
+          "inputType": "string",
+          "apply": {
+            "label": "Preview",
+            "command": { "server": { "id": "catFile", "template": "cat ${value}" } }
+          },
+          "presentation": "modal",
+          "timeoutMs": 8000,
+          "w": 6,
+          "h": 3,
+          "x": 0,
+          "y": 0
+        }
+      ]
     },
     {
-      "id": "stepVol",
-      "type": "stepper",
-      "label": "Volume",
-      "min": 0,
-      "max": 150,
-      "step": 5,
-      "value": 50,
-      "command": { "server": { "id": "setVol", "template": "pactl set-sink-volume @DEFAULT_SINK@ ${value}%" } },
-      "presentation": "popover",
-      "timeoutMs": 5000
-    },
-    {
-      "id": "inpFile",
-      "type": "input",
-      "label": "File path",
-      "inputType": "string",
-      "apply": {
-        "label": "Preview",
-        "command": { "server": { "id": "catFile", "template": "cat ${value}" } }
-      },
-      "presentation": "modal",
-      "timeoutMs": 8000
-    },
-    {
-      "id": "envOut",
-      "type": "output",
-      "label": "Environment",
-      "command": { "server": { "id": "printEnv", "template": "env" } },
-      "mode": "poll",
-      "intervalMs": 5000,
-      "presentation": "inline",
-      "timeoutMs": 0,
+      "id": "systemOutputs",
+      "type": "group",
+      "label": "System information",
       "w": 12,
-      "h": 4
-    },
-    {
-      "id": "fastfetch",
-      "type": "output",
-      "label": "Fastfetch",
-      "command": { "server": { "id": "fastfetch", "template": "fastfetch --logo none" } },
-      "mode": "manual",
-      "onDemandButtonLabel": "Refresh",
-      "presentation": "modal",
-      "timeoutMs": 9000,
-      "w": 12,
-      "h": 3
-    },
-    {
-      "id": "diskUsage",
-      "type": "output",
-      "label": "Disk usage",
-      "command": { "server": { "id": "diskUsage", "template": "df -h /" } },
-      "mode": "manual",
-      "onDemandButtonLabel": "Check disk",
-      "presentation": "popover",
-      "timeoutMs": 6000
-    },
-    {
-      "id": "hostname",
-      "type": "output",
-      "label": "Hostname",
-      "command": { "server": { "id": "hostname", "template": "hostname" } },
-      "mode": "manual",
-      "onDemandButtonLabel": "Read host",
-      "presentation": "tooltip",
-      "timeoutMs": 3000
-    },
-    {
-      "id": "journalTail",
-      "type": "output",
-      "label": "Latest system log entries",
-      "command": { "server": { "id": "tailSyslog", "template": "tail -n 20 /var/log/syslog" } },
-      "mode": "poll",
-      "intervalMs": 15000,
-      "presentation": "notification",
-      "timeoutMs": 7000,
-      "w": 12,
-      "h": 2
+      "h": 10,
+      "x": 0,
+      "y": 4,
+      "border": true,
+      "gap": 16,
+      "elements": [
+        {
+          "id": "envOut",
+          "type": "output",
+          "label": "Environment",
+          "command": { "server": { "id": "printEnv", "template": "env" } },
+          "mode": "poll",
+          "intervalMs": 5000,
+          "presentation": "inline",
+          "timeoutMs": 0,
+          "w": 12,
+          "h": 4,
+          "x": 0,
+          "y": 0
+        },
+        {
+          "id": "fastfetch",
+          "type": "output",
+          "label": "Fastfetch",
+          "command": { "server": { "id": "fastfetch", "template": "fastfetch --logo none" } },
+          "mode": "manual",
+          "onDemandButtonLabel": "Refresh",
+          "presentation": "modal",
+          "timeoutMs": 9000,
+          "w": 6,
+          "h": 3,
+          "x": 0,
+          "y": 4
+        },
+        {
+          "id": "diskUsage",
+          "type": "output",
+          "label": "Disk usage",
+          "command": { "server": { "id": "diskUsage", "template": "df -h /" } },
+          "mode": "manual",
+          "onDemandButtonLabel": "Check disk",
+          "presentation": "popover",
+          "timeoutMs": 6000,
+          "w": 6,
+          "h": 2,
+          "x": 6,
+          "y": 4
+        },
+        {
+          "id": "hostname",
+          "type": "output",
+          "label": "Hostname",
+          "command": { "server": { "id": "hostname", "template": "hostname" } },
+          "mode": "manual",
+          "onDemandButtonLabel": "Read host",
+          "presentation": "tooltip",
+          "timeoutMs": 3000,
+          "w": 6,
+          "h": 1,
+          "x": 6,
+          "y": 7
+        },
+        {
+          "id": "journalTail",
+          "type": "output",
+          "label": "Latest system log entries",
+          "command": { "server": { "id": "tailSyslog", "template": "tail -n 20 /var/log/syslog" } },
+          "mode": "poll",
+          "intervalMs": 15000,
+          "presentation": "notification",
+          "timeoutMs": 7000,
+          "w": 12,
+          "h": 2,
+          "x": 0,
+          "y": 8
+        }
+      ]
     }
   ],
   "whitelist": ["cat", "df", "env", "fastfetch", "hostname", "pactl", "tail", "uptime"]

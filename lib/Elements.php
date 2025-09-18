@@ -14,33 +14,109 @@ class Elements
         $seen = [];
 
         foreach ($elements as $definition) {
-            if (!is_array($definition)) {
-                throw new InvalidArgumentException('Element definition must be an object.');
-            }
-            if (empty($definition['id']) || empty($definition['type'])) {
-                throw new InvalidArgumentException('Each element requires an id and type.');
-            }
-
-            $definition['id'] = Defaults::sanitizeId((string) $definition['id']);
-            if (isset($seen[$definition['id']])) {
-                throw new InvalidArgumentException('Duplicate element id: ' . $definition['id']);
-            }
-            $seen[$definition['id']] = true;
-
-            if (!in_array($definition['type'], self::SUPPORTED_TYPES, true)) {
-                throw new InvalidArgumentException('Unsupported element type: ' . $definition['type']);
-            }
-
-            $definition = self::applyDefaults($definition, $defaults);
-            $definition = self::normalizeByType($definition);
-            $normalized[] = $definition;
-
-            foreach (self::commandsFor($definition) as $command) {
-                $commands[$command['id']] = $command;
-            }
+            $normalized[] = self::normalizeDefinition($definition, $defaults, $seen, $commands);
         }
 
         return [$normalized, $commands];
+    }
+
+    private static function normalizeDefinition($definition, array $defaults, array &$seen, array &$commands): array
+    {
+        if (!is_array($definition)) {
+            throw new InvalidArgumentException('Element definition must be an object.');
+        }
+        if (empty($definition['id']) || empty($definition['type'])) {
+            throw new InvalidArgumentException('Each element requires an id and type.');
+        }
+
+        $definition['id'] = Defaults::sanitizeId((string) $definition['id']);
+        if (isset($seen[$definition['id']])) {
+            throw new InvalidArgumentException('Duplicate element id: ' . $definition['id']);
+        }
+        $seen[$definition['id']] = true;
+
+        if ($definition['type'] === 'group') {
+            return self::normalizeGroup($definition, $defaults, $seen, $commands);
+        }
+
+        if (!in_array($definition['type'], self::SUPPORTED_TYPES, true)) {
+            throw new InvalidArgumentException('Unsupported element type: ' . $definition['type']);
+        }
+
+        $definition = self::applyDefaults($definition, $defaults);
+        $definition['x'] = self::normalizeCoordinate($definition['x'] ?? null);
+        $definition['y'] = self::normalizeCoordinate($definition['y'] ?? null);
+        $definition = self::normalizeByType($definition);
+        $definition['w'] = max(1, (int) ($definition['w'] ?? 1));
+        $definition['h'] = max(1, (int) ($definition['h'] ?? 1));
+
+        foreach (self::commandsFor($definition) as $command) {
+            $commands[$command['id']] = $command;
+        }
+
+        return $definition;
+    }
+
+    private static function normalizeGroup(array $group, array $defaults, array &$seen, array &$commands): array
+    {
+        $group = self::applyDefaults($group, $defaults);
+        $group['w'] = max(1, (int) ($group['w'] ?? 1));
+        $group['h'] = max(1, (int) ($group['h'] ?? 1));
+        $group['x'] = self::normalizeCoordinate($group['x'] ?? null);
+        $group['y'] = self::normalizeCoordinate($group['y'] ?? null);
+        $group['label'] = $group['label'] ?? $group['id'];
+        $group['layout'] = in_array($group['layout'] ?? '', ['grid', 'stack'], true) ? $group['layout'] : 'grid';
+        $group['columns'] = isset($group['columns']) ? max(1, (int) $group['columns']) : 12;
+        $group['gap'] = isset($group['gap']) ? max(0, (int) $group['gap']) : null;
+
+        if (!array_key_exists('elements', $group)) {
+            $group['elements'] = [];
+        }
+        if (!is_array($group['elements'])) {
+            throw new InvalidArgumentException('Group elements must be an array for group ' . $group['id']);
+        }
+
+        if (array_key_exists('border', $group)) {
+            if (is_string($group['border'])) {
+                $border = trim($group['border']);
+                $group['border'] = $border === '' ? false : $border;
+            } else {
+                $group['border'] = (bool) $group['border'];
+            }
+        }
+
+        if (array_key_exists('background', $group)) {
+            $group['background'] = (string) $group['background'];
+        }
+
+        $childDefaults = $defaults;
+        if (isset($group['defaults']) && is_array($group['defaults'])) {
+            $childDefaults = array_replace($childDefaults, $group['defaults']);
+        }
+        unset($group['defaults']);
+
+        $children = [];
+        foreach ($group['elements'] as $child) {
+            $children[] = self::normalizeDefinition($child, $childDefaults, $seen, $commands);
+        }
+        $group['elements'] = $children;
+
+        return $group;
+    }
+
+    private static function normalizeCoordinate($value): ?int
+    {
+        if ($value === null) {
+            return null;
+        }
+        if ($value === '' || $value === 'auto') {
+            return null;
+        }
+        $coordinate = (int) $value;
+        if ($coordinate < 0) {
+            $coordinate = 0;
+        }
+        return $coordinate;
     }
 
     private static function applyDefaults(array $element, array $defaults): array
