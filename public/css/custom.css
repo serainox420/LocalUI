@@ -1,0 +1,21 @@
+/* public/css/custom.css */
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: var(--surface-color, #f8fafc);
+}
+
+.component-card {
+  backdrop-filter: blur(6px);
+}
+
+.component-card[data-state="error"] {
+  border-color: rgba(220, 38, 38, 0.6);
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.15), 0 10px 30px -20px rgba(220, 38, 38, 0.6);
+}
+
+.component-card pre {
+  font-family: 'JetBrains Mono', 'Fira Code', 'SFMono-Regular', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
