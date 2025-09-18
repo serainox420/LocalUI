@@ -34,7 +34,7 @@ $surface = $config['globals']['theme']['palette']['surface'] ?? '#F8FAFC';
         }
     </style>
 </head>
-<body class="bg-slate-100 min-h-screen">
+<body class="min-h-screen text-slate-100 antialiased">
 <?php if ($error): ?>
     <div class="max-w-2xl mx-auto mt-12 bg-red-50 border border-red-200 text-red-800 rounded p-6">
         <h1 class="text-xl font-semibold mb-2">Configuration Error</h1>

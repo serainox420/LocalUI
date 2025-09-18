@@ -1,21 +1,233 @@
 /* public/css/custom.css */
 :root {
-  color-scheme: light;
+  color-scheme: dark;
+  --surface-color: #020817;
+  --surface-elevated: rgba(15, 23, 42, 0.78);
+  --surface-border: rgba(148, 163, 184, 0.24);
+  --surface-border-strong: rgba(148, 163, 184, 0.45);
+  --surface-hover: rgba(30, 41, 59, 0.85);
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --danger-color: #f87171;
+  --shadow-strong: 0 28px 60px -30px rgba(15, 23, 42, 0.9);
+  --shadow-hover: 0 32px 75px -35px rgba(15, 23, 42, 0.95);
+  --primary-color: #4338ca;
+  --accent-color: #8b5cf6;
 }
 
 body {
-  background: var(--surface-color, #f8fafc);
+  background:
+    radial-gradient(circle at top left, rgba(99, 102, 241, 0.35), transparent 55%),
+    radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.25), transparent 50%),
+    var(--surface-color);
+  color: var(--text-primary);
+  min-height: 100vh;
+  font-family: inherit;
 }
 
 .component-card {
-  backdrop-filter: blur(6px);
+  background: var(--surface-elevated);
+  border: 1px solid var(--surface-border);
+  border-radius: 1.25rem;
+  box-shadow: var(--shadow-strong);
+  backdrop-filter: blur(18px);
+  transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.2s ease;
+}
+
+.component-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+}
+
+.component-card header {
+  letter-spacing: 0.2em;
 }
 
 .component-card[data-state="error"] {
-  border-color: rgba(220, 38, 38, 0.6);
-  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.15), 0 10px 30px -20px rgba(220, 38, 38, 0.6);
+  border-color: rgba(248, 113, 113, 0.6);
+  box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.18), 0 26px 55px -28px rgba(248, 113, 113, 0.6);
 }
 
-.component-card pre {
-  font-family: 'JetBrains Mono', 'Fira Code', 'SFMono-Regular', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+.component-card pre,
+.result-block {
+  font-family: 'JetBrains Mono', 'Fira Code', 'SFMono-Regular', ui-monospace, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+}
+
+.result-inline {
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  padding-top: 0.75rem;
+}
+
+.result-block {
+  background: rgba(15, 23, 42, 0.85);
+  color: var(--text-primary);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 1rem;
+  padding: 0.85rem;
+  max-height: 18rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.result-block-error {
+  background: rgba(127, 29, 29, 0.9);
+  border-color: rgba(248, 113, 113, 0.35);
+  color: #fee2e2;
+}
+
+.result-error {
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  background: rgba(248, 113, 113, 0.12);
+  color: #fecaca;
+  border-radius: 0.9rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.8rem;
+}
+
+.ui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  padding: 0.55rem 1.35rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+}
+
+.ui-button:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.ui-button-primary {
+  background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+  color: #ffffff;
+  box-shadow: 0 12px 30px -18px rgba(99, 102, 241, 0.9);
+}
+
+.ui-button-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 38px -18px rgba(99, 102, 241, 0.95);
+}
+
+.ui-button-ghost {
+  background: transparent;
+  border-color: rgba(148, 163, 184, 0.35);
+  color: var(--text-primary);
+}
+
+.ui-button-ghost:hover {
+  border-color: rgba(148, 163, 184, 0.55);
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.ui-surface {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid var(--surface-border-strong);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-strong);
+  padding: 1.1rem 1.25rem;
+  pointer-events: auto;
+  color: var(--text-primary);
+}
+
+.ui-surface-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.ui-surface-close {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.75rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.ui-surface-close:hover {
+  color: #ffffff;
+  transform: scale(1.05);
+}
+
+.ui-tone-info {
+  border-color: rgba(99, 102, 241, 0.45);
+  box-shadow: 0 24px 55px -35px rgba(99, 102, 241, 0.65);
+}
+
+.ui-tone-success {
+  border-color: rgba(34, 197, 94, 0.35);
+  box-shadow: 0 24px 50px -35px rgba(34, 197, 94, 0.6);
+}
+
+.ui-tone-error {
+  border-color: rgba(248, 113, 113, 0.45);
+  box-shadow: 0 24px 60px -35px rgba(248, 113, 113, 0.65);
+}
+
+.ui-notification {
+  pointer-events: auto;
+}
+
+.ui-floating {
+  position: absolute;
+  min-width: 18rem;
+  max-width: min(24rem, 90vw);
+}
+
+.ui-floating-tooltip {
+  transform-origin: bottom center;
+}
+
+.ui-floating-popover {
+  transform-origin: top center;
+}
+
+.ui-modal-scrim {
+  background: rgba(2, 6, 23, 0.78);
+  backdrop-filter: blur(6px);
+}
+
+.ui-modal-panel {
+  width: min(80vw, 960px);
+  max-height: 80vh;
+  overflow: auto;
+}
+
+@media (max-width: 640px) {
+  .ui-notification-host {
+    right: 1rem;
+    left: 1rem;
+    max-width: unset;
+  }
+
+  .ui-floating {
+    left: 1rem !important;
+    right: 1rem !important;
+    width: calc(100% - 2rem);
+    min-width: unset;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .component-card,
+  .ui-button,
+  .ui-surface {
+    transition: none;
+  }
 }

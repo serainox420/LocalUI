@@ -15,6 +15,7 @@
 
   const polls = new Map();
   const views = new Map();
+  const overlay = createOverlayManager();
 
   setupLayout(root, config.globals);
 
@@ -56,7 +57,7 @@
   function buildCard(element) {
     const section = document.createElement('section');
     section.dataset.elementId = element.id;
-    section.className = 'rounded-lg border border-slate-200 bg-white shadow-sm p-4 flex flex-col gap-3';
+    section.className = 'component-card flex flex-col gap-4 p-5 text-sm text-slate-200';
     if (element.classes) {
       section.className += ` ${element.classes}`;
     }
@@ -70,62 +71,374 @@
     if (element.tooltip) section.title = element.tooltip;
 
     const header = document.createElement('header');
-    header.className = 'text-sm font-semibold text-slate-600 uppercase';
+    header.className = 'text-xs font-semibold uppercase tracking-[0.18em] text-slate-400';
     header.textContent = element.label || element.id;
     section.appendChild(header);
 
     const body = document.createElement('div');
-    body.className = 'flex flex-col gap-3 text-sm text-slate-700';
+    body.className = 'flex flex-col gap-3 text-sm';
     section.appendChild(body);
 
-    const result = createResultView();
-    views.set(element.id, result);
-    section.appendChild(result.wrapper);
-
+    let anchor = null;
     switch (element.type) {
       case 'button':
-        renderButton(element, body);
+        anchor = renderButton(element, body);
         break;
       case 'toggle':
-        renderToggle(element, body);
+        anchor = renderToggle(element, body);
         break;
       case 'stepper':
-        renderStepper(element, body);
+        anchor = renderStepper(element, body);
         break;
       case 'input':
-        renderInput(element, body);
+        anchor = renderInput(element, body);
         break;
       case 'output':
-        renderOutput(element, body);
+        anchor = renderOutput(element, body);
         break;
       default:
         body.textContent = `Unsupported type: ${element.type}`;
     }
 
+    const view = createResultView(element, section, anchor || body);
+    views.set(element.id, view);
+
     return section;
   }
 
-  function createResultView() {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'flex flex-col gap-2 text-xs text-slate-600 hidden';
+  function createResultView(element, section, anchor) {
+    const presentation = normalizePresentation(element.presentation);
+    const timeoutMs = normalizeTimeout(element.timeoutMs);
+    const host = anchor || section;
+
+    if (presentation === 'inline') {
+      return createInlineResultView(section, timeoutMs);
+    }
+
+    return createOverlayResultView(presentation, host, timeoutMs);
+  }
+
+  function normalizePresentation(value) {
+    const modes = ['inline', 'tooltip', 'notification', 'popover', 'modal'];
+    return modes.includes(value) ? value : 'inline';
+  }
+
+  function normalizeTimeout(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric < 0) {
+      return 5000;
+    }
+    return numeric;
+  }
+
+  function createInlineResultView(section, timeoutMs) {
+    let wrapper = null;
+    let hideTimer = null;
+
+    function ensureWrapper() {
+      if (!wrapper) {
+        wrapper = document.createElement('div');
+        wrapper.className = 'result-inline flex flex-col gap-3 text-xs text-slate-300';
+      }
+      if (!wrapper.isConnected) {
+        section.appendChild(wrapper);
+      }
+    }
+
+    function scheduleHide() {
+      if (timeoutMs <= 0) {
+        return;
+      }
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => {
+        if (wrapper && wrapper.isConnected) {
+          wrapper.remove();
+        }
+      }, timeoutMs);
+    }
+
+    function render(description) {
+      ensureWrapper();
+      wrapper.replaceChildren(composeResultFragment(description));
+      scheduleHide();
+    }
+
+    return {
+      showResult(payload) {
+        render(describeResult(payload));
+      },
+      showError(message) {
+        render(describeError(message));
+      },
+    };
+  }
+
+  function createOverlayResultView(presentation, host, timeoutMs) {
+    return {
+      showResult(payload) {
+        const description = describeResult(payload);
+        const content = buildFloatingContent(description);
+        presentFloating(presentation, host, content, description.tone, timeoutMs);
+      },
+      showError(message) {
+        const description = describeError(message);
+        const content = buildFloatingContent(description);
+        presentFloating(presentation, host, content, 'error', timeoutMs);
+      },
+    };
+  }
+
+  function buildFloatingContent(description) {
+    const container = document.createElement('div');
+    container.className = 'flex flex-col gap-3';
+    container.appendChild(composeResultFragment(description));
+    return container;
+  }
+
+  function composeResultFragment(description) {
+    const fragment = document.createDocumentFragment();
 
     const status = document.createElement('div');
-    status.className = 'text-xs';
-    wrapper.appendChild(status);
+    status.className = `text-xs font-semibold tracking-wide ${description.statusClass}`;
+    status.textContent = description.statusText;
+    fragment.appendChild(status);
 
-    const stdout = document.createElement('pre');
-    stdout.className = 'rounded-md bg-slate-900 text-slate-100 p-3 whitespace-pre-wrap break-words max-h-64 overflow-auto';
-    wrapper.appendChild(stdout);
+    if (description.stdout) {
+      const stdout = document.createElement('pre');
+      stdout.className = 'result-block';
+      stdout.textContent = description.stdout;
+      fragment.appendChild(stdout);
+    }
 
-    const stderr = document.createElement('pre');
-    stderr.className = 'rounded-md bg-red-900/90 text-red-100 p-3 whitespace-pre-wrap break-words max-h-48 overflow-auto hidden';
-    wrapper.appendChild(stderr);
+    if (description.stderr) {
+      const stderr = document.createElement('pre');
+      stderr.className = 'result-block result-block-error';
+      stderr.textContent = description.stderr;
+      fragment.appendChild(stderr);
+    }
 
-    const error = document.createElement('div');
-    error.className = 'rounded-md bg-red-50 text-red-700 border border-red-200 px-3 py-2 hidden';
-    wrapper.appendChild(error);
+    if (description.errorText) {
+      const error = document.createElement('div');
+      error.className = 'result-error';
+      error.textContent = description.errorText;
+      fragment.appendChild(error);
+    }
 
-    return { wrapper, status, stdout, stderr, error };
+    return fragment;
+  }
+
+  function describeResult(payload) {
+    const result = payload?.result || {};
+    const ok = Boolean(result.ok);
+    const code = result.code ?? '0';
+    const stdout = (result.stdout || '').trimEnd();
+    const stderr = (result.stderr || '').trimEnd();
+    const when = result.ts ? safeDate(result.ts) : '';
+    const prefix = ok ? 'OK' : 'Error';
+    const statusText = when ? `${prefix} • exit ${code} • ${when}` : `${prefix} • exit ${code}`;
+    return {
+      statusText,
+      statusClass: ok ? 'text-emerald-400' : 'text-rose-400',
+      stdout,
+      stderr,
+      errorText: '',
+      tone: ok ? 'success' : 'error',
+    };
+  }
+
+  function describeError(message) {
+    return {
+      statusText: 'Execution failed',
+      statusClass: 'text-rose-400',
+      stdout: '',
+      stderr: '',
+      errorText: message,
+      tone: 'error',
+    };
+  }
+
+  function presentFloating(presentation, host, content, tone, timeoutMs) {
+    switch (presentation) {
+      case 'tooltip':
+        overlay.showTooltip(host, content, { timeoutMs, tone });
+        break;
+      case 'notification':
+        overlay.showNotification(content, { timeoutMs, tone });
+        break;
+      case 'popover':
+        overlay.showPopover(host, content, { timeoutMs, tone });
+        break;
+      case 'modal':
+        overlay.showModal(content, { timeoutMs, tone });
+        break;
+      default:
+        overlay.showNotification(content, { timeoutMs, tone });
+        break;
+    }
+  }
+
+  function createOverlayManager() {
+    const notificationHost = document.createElement('div');
+    notificationHost.className = 'ui-notification-host pointer-events-none fixed top-6 right-6 z-[2000] flex w-full max-w-sm flex-col gap-3';
+    document.body.appendChild(notificationHost);
+
+    const floatingLayer = document.createElement('div');
+    floatingLayer.className = 'ui-floating-layer pointer-events-none fixed inset-0 z-[2050]';
+    document.body.appendChild(floatingLayer);
+
+    const modalScrim = document.createElement('div');
+    modalScrim.className = 'ui-modal-scrim fixed inset-0 z-[2100] hidden items-center justify-center p-6';
+    document.body.appendChild(modalScrim);
+
+    let modalTimer = null;
+
+    function showNotification(content, options = {}) {
+      const tone = toneFor(options.tone);
+      const timeoutMs = normalizeTimeout(options.timeoutMs);
+      const surface = createSurface(content, tone, {
+        closable: true,
+        onClose: () => surface.remove(),
+      });
+      surface.classList.add('ui-notification');
+      notificationHost.appendChild(surface);
+      scheduleDismiss(() => surface.remove(), timeoutMs);
+      return surface;
+    }
+
+    function showTooltip(anchor, content, options = {}) {
+      return showFloating(anchor, content, options, { variant: 'tooltip', closable: false });
+    }
+
+    function showPopover(anchor, content, options = {}) {
+      return showFloating(anchor, content, options, { variant: 'popover', closable: true });
+    }
+
+    function showFloating(anchor, content, options, settings) {
+      const tone = toneFor(options.tone);
+      const timeoutMs = normalizeTimeout(options.timeoutMs);
+      const surface = createSurface(content, tone, {
+        closable: settings.closable,
+        onClose: () => surface.remove(),
+      });
+      surface.classList.add('ui-floating', `ui-floating-${settings.variant}`);
+      floatingLayer.appendChild(surface);
+      requestAnimationFrame(() => positionFloating(surface, anchor, settings.variant));
+      scheduleDismiss(() => surface.remove(), timeoutMs);
+      return surface;
+    }
+
+    function showModal(content, options = {}) {
+      const tone = toneFor(options.tone);
+      const timeoutMs = normalizeTimeout(options.timeoutMs);
+      closeModal();
+      modalScrim.innerHTML = '';
+      const surface = createSurface(content, tone, {
+        closable: true,
+        onClose: () => closeModal(),
+      });
+      surface.classList.add('ui-modal-panel');
+      modalScrim.appendChild(surface);
+      modalScrim.classList.remove('hidden');
+      scheduleModalDismiss(timeoutMs);
+      return surface;
+    }
+
+    function createSurface(content, tone, options) {
+      const surface = document.createElement('div');
+      surface.className = `ui-surface ui-tone-${tone}`;
+      surface.tabIndex = -1;
+
+      const body = document.createElement('div');
+      body.className = 'ui-surface-body';
+      body.appendChild(content);
+      surface.appendChild(body);
+
+      if (options?.closable) {
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'ui-surface-close';
+        close.setAttribute('aria-label', 'Close');
+        close.innerHTML = '&times;';
+        close.addEventListener('click', (event) => {
+          event.stopPropagation();
+          if (typeof options.onClose === 'function') {
+            options.onClose();
+          }
+        });
+        surface.appendChild(close);
+      }
+
+      return surface;
+    }
+
+    function scheduleDismiss(action, timeoutMs) {
+      if (timeoutMs <= 0) {
+        return;
+      }
+      setTimeout(action, timeoutMs);
+    }
+
+    function scheduleModalDismiss(timeoutMs) {
+      clearTimeout(modalTimer);
+      if (timeoutMs <= 0) {
+        return;
+      }
+      modalTimer = setTimeout(() => {
+        closeModal();
+      }, timeoutMs);
+    }
+
+    function closeModal() {
+      clearTimeout(modalTimer);
+      modalScrim.classList.add('hidden');
+      modalScrim.innerHTML = '';
+    }
+
+    modalScrim.addEventListener('click', (event) => {
+      if (event.target === modalScrim) {
+        closeModal();
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !modalScrim.classList.contains('hidden')) {
+        closeModal();
+      }
+    });
+
+    function positionFloating(surface, anchor, variant) {
+      const reference = anchor && typeof anchor.getBoundingClientRect === 'function'
+        ? anchor.getBoundingClientRect()
+        : new DOMRect(window.innerWidth / 2, window.innerHeight / 2, 0, 0);
+      const margin = 16;
+      const rect = surface.getBoundingClientRect();
+
+      let top;
+      let left;
+      if (variant === 'tooltip') {
+        top = reference.top - rect.height - margin;
+        left = reference.left + reference.width / 2 - rect.width / 2;
+      } else {
+        top = reference.top + reference.height + margin;
+        left = reference.left + reference.width / 2 - rect.width / 2;
+      }
+
+      top = clamp(top, margin, window.innerHeight - rect.height - margin);
+      left = clamp(left, margin, window.innerWidth - rect.width - margin);
+
+      surface.style.top = `${top}px`;
+      surface.style.left = `${left}px`;
+    }
+
+    function toneFor(value) {
+      return ['success', 'error', 'info'].includes(value) ? value : 'info';
+    }
+
+    return { showNotification, showTooltip, showPopover, showModal };
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
   }
 
   function renderButton(element, container) {
@@ -144,19 +457,22 @@
         // already shown to user
       }
     });
+
+    return button;
   }
 
   function renderToggle(element, container) {
     const row = document.createElement('div');
-    row.className = 'flex items-center gap-3';
+    row.className = 'flex items-center gap-3 text-sm text-slate-200';
 
     const input = document.createElement('input');
     input.type = 'checkbox';
     input.checked = Boolean(element.initial);
-    input.className = 'h-5 w-5 rounded border-slate-300 text-[var(--accent-color)] focus:ring-[var(--accent-color)]';
+    input.className = 'h-5 w-5 rounded border-slate-600 bg-slate-900/40 text-[var(--accent-color)] focus:ring-[var(--accent-color)] focus:ring-2 focus:ring-offset-0';
 
     const label = document.createElement('span');
     label.textContent = input.checked ? 'On' : 'Off';
+    label.className = 'text-sm text-slate-200';
 
     row.appendChild(input);
     row.appendChild(label);
@@ -178,11 +494,13 @@
         input.disabled = false;
       }
     });
+
+    return row;
   }
 
   function renderStepper(element, container) {
     const row = document.createElement('div');
-    row.className = 'flex items-center gap-2';
+    row.className = 'flex flex-wrap items-center gap-3 text-sm text-slate-200';
 
     const minus = makeButton('−', true);
     const plus = makeButton('+', true);
@@ -192,7 +510,7 @@
     if (element.min !== undefined) input.min = element.min;
     if (element.max !== undefined) input.max = element.max;
     if (element.step !== undefined) input.step = element.step;
-    input.className = 'w-24 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--accent-color)] focus:ring-[var(--accent-color)]';
+    input.className = 'w-24 rounded-xl border border-slate-600 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 shadow-inner focus:border-[var(--accent-color)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:ring-offset-0';
 
     const apply = makeButton('Apply');
 
@@ -223,15 +541,17 @@
       if (element.max !== undefined) next = Math.min(next, Number(element.max));
       input.value = String(next);
     }
+
+    return apply;
   }
 
   function renderInput(element, container) {
     const field = document.createElement('input');
-    field.className = 'rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--accent-color)] focus:ring-[var(--accent-color)]';
+    field.className = 'w-full rounded-xl border border-slate-600 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 shadow-inner focus:border-[var(--accent-color)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:ring-offset-0 placeholder-slate-500';
     field.type = element.inputType === 'int' ? 'number' : 'text';
 
     const row = document.createElement('div');
-    row.className = 'flex items-center gap-2';
+    row.className = 'flex flex-col gap-3 text-sm text-slate-200 sm:flex-row sm:items-center';
 
     const button = makeButton(element.apply?.label || 'Apply');
 
@@ -255,6 +575,8 @@
         // shown already
       }
     });
+
+    return button;
   }
 
   function renderOutput(element, container) {
@@ -271,24 +593,20 @@
           // shown already
         }
       });
+      return button;
     } else {
       const note = document.createElement('p');
-      note.className = 'text-xs text-slate-500';
+      note.className = 'text-xs text-slate-400';
       note.textContent = `Polling every ${Math.max(Number(element.intervalMs) || 0, 1)} ms`;
       container.appendChild(note);
+      return note;
     }
   }
 
   function makeButton(label, ghost) {
     const button = document.createElement('button');
     button.type = 'button';
-    if (ghost) {
-      button.className = 'inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-400';
-    } else {
-      button.className = 'inline-flex items-center justify-center rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500';
-      button.style.backgroundColor = 'var(--primary-color)';
-      button.style.borderColor = 'var(--primary-color)';
-    }
+    button.className = ghost ? 'ui-button ui-button-ghost' : 'ui-button ui-button-primary';
     button.textContent = label;
     return button;
   }
@@ -358,17 +676,7 @@
     if (!view) {
       return;
     }
-
-    view.wrapper.classList.remove('hidden');
-    const { ok, code, stdout, stderr, ts } = payload.result;
-    const when = ts ? safeDate(ts) : '';
-    view.status.textContent = ok ? `OK • exit ${code} • ${when}` : `Error • exit ${code} • ${when}`;
-    view.status.className = ok ? 'text-xs text-green-600' : 'text-xs text-red-600';
-
-    view.stdout.textContent = stdout || '';
-    view.stderr.textContent = stderr || '';
-    view.stderr.classList.toggle('hidden', !stderr);
-    view.error.classList.add('hidden');
+    view.showResult(payload);
   }
 
   function safeDate(value) {
@@ -384,9 +692,7 @@
     if (!view) {
       return;
     }
-    view.wrapper.classList.remove('hidden');
-    view.error.textContent = message;
-    view.error.classList.remove('hidden');
+    view.showError(message);
   }
 
   function executeClientScript(element, script) {

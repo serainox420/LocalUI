@@ -63,6 +63,12 @@ class Elements
 
     private static function normalizeByType(array $element): array
     {
+        $presentations = ['inline', 'tooltip', 'notification', 'popover', 'modal'];
+        $element['presentation'] = in_array($element['presentation'] ?? '', $presentations, true)
+            ? $element['presentation']
+            : 'inline';
+        $element['timeoutMs'] = isset($element['timeoutMs']) ? max(0, (int) $element['timeoutMs']) : 5000;
+
         switch ($element['type']) {
             case 'button':
                 $element['label'] = $element['label'] ?? $element['id'];
