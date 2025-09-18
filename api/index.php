@@ -8,27 +8,21 @@ try {
     Core::sendError($e->getMessage(), 500);
 }
 
+$route = defined('API_ROUTE')
+    ? API_ROUTE
+    : ltrim(parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '', '/');
+$route = str_starts_with($route, 'api/') ? substr($route, 4) : $route;
+$route = $route === '' ? 'run' : $route;
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-$uriPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
-$base = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
-if ($base !== '' && str_starts_with($uriPath, $base)) {
-    $uriPath = substr($uriPath, strlen($base));
-}
-$uriPath = '/' . ltrim($uriPath, '/');
 
-switch ($method) {
-    case 'POST':
-        if ($uriPath === '/run') {
-            handle_run();
-            break;
-        }
-        break;
-    case 'GET':
-        if ($uriPath === '/read') {
-            handle_read();
-            break;
-        }
-        break;
+if ($route === 'run' && $method === 'POST') {
+    handle_run();
+    return;
+}
+
+if ($route === 'read' && $method === 'GET') {
+    handle_read();
+    return;
 }
 
 Core::sendError('Not Found', 404);
@@ -36,7 +30,7 @@ Core::sendError('Not Found', 404);
 function handle_run(): void
 {
     $raw = file_get_contents('php://input');
-    $payload = json_decode($raw, true);
+    $payload = json_decode($raw ?: '[]', true);
     if (!is_array($payload)) {
         Core::sendError('Invalid JSON payload.');
     }
@@ -54,18 +48,16 @@ function handle_run(): void
         Core::sendError('Unknown command: ' . $commandId, 404);
     }
 
-    $config = Core::getConfig();
-
     try {
-        $result = Exec::run($command, $args, $config);
+        $result = Exec::run($command, $args, Core::getConfig());
     } catch (Throwable $e) {
         Core::sendError($e->getMessage(), 400, ['commandId' => $commandId]);
     }
 
     $record = [
         'ok' => $result['ok'],
-        'commandId' => $commandId,
         'id' => $elementId !== '' ? $elementId : null,
+        'commandId' => $commandId,
         'result' => $result,
     ];
 

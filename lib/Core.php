@@ -10,23 +10,22 @@ class Core
 
     public static function init(?string $path = null): void
     {
-        if (!empty(self::$config)) {
-            return;
+        if (!self::$config) {
+            self::loadConfig($path);
         }
-        self::loadConfig($path);
     }
 
     public static function loadConfig(?string $path = null): array
     {
         $base = Defaults::baseConfig();
         $configPath = $path ?? __DIR__ . '/../config/ui.json';
-        $fallbackPath = __DIR__ . '/../config/ui.sample.json';
+        $fallback = __DIR__ . '/../config/ui.sample.json';
 
         $raw = null;
         if (is_file($configPath)) {
             $raw = file_get_contents($configPath);
-        } elseif (is_file($fallbackPath)) {
-            $raw = file_get_contents($fallbackPath);
+        } elseif (is_file($fallback)) {
+            $raw = file_get_contents($fallback);
         }
 
         $data = [];
@@ -37,22 +36,13 @@ class Core
             }
         }
 
-        $globals = $base['globals'];
-        if (isset($data['globals']) && is_array($data['globals'])) {
-            $globals = array_replace_recursive($globals, $data['globals']);
-        }
-
-        $elements = $data['elements'] ?? [];
-        [$normalized, $commands] = Elements::normalize($elements, $globals);
-
-        $whitelist = [];
-        if (isset($data['whitelist']) && is_array($data['whitelist'])) {
-            $whitelist = array_values(array_unique(array_map('strval', $data['whitelist'])));
-        }
+        $globals = array_replace_recursive($base['globals'], $data['globals'] ?? []);
+        [$elements, $commands] = Elements::normalize($data['elements'] ?? [], $globals);
+        $whitelist = array_values(array_unique(array_map('strval', $data['whitelist'] ?? [])));
 
         self::$config = [
             'globals' => $globals,
-            'elements' => $normalized,
+            'elements' => $elements,
             'whitelist' => $whitelist,
         ];
         self::$commands = $commands;
@@ -62,7 +52,7 @@ class Core
 
     public static function getConfig(): array
     {
-        if (empty(self::$config)) {
+        if (!self::$config) {
             self::init();
         }
         return self::$config;
@@ -70,7 +60,7 @@ class Core
 
     public static function getCommand(string $commandId): ?array
     {
-        if (empty(self::$commands)) {
+        if (!self::$commands) {
             self::init();
         }
         return self::$commands[$commandId] ?? null;
