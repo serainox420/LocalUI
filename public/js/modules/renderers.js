@@ -3,6 +3,9 @@ import { normalizeLayout } from './layout.js';
 export function createRenderer({ state, createResultView, playElementSound, server }) {
   const { polls, views, elementIndex } = state;
   const { runServerCommand, hydrate, executeClientScript } = server;
+  const navbarHosts = new Map();
+  let navbarResizeHandlerAttached = false;
+  let navbarResizeObserver = null;
 
   function renderEntity(entity, container, context) {
     if (!entity || typeof entity !== 'object') {
@@ -15,11 +18,16 @@ export function createRenderer({ state, createResultView, playElementSound, serv
 
     const parentLayout = context?.layout || 'grid';
 
+    if (entity.type === 'navbar') {
+      renderNavbar(entity, context);
+      return;
+    }
+
     if (entity.type === 'group') {
       const group = buildGroup(entity, context);
       applyPlacement(group.node, entity, parentLayout);
       container.appendChild(group.node);
-      const nextContext = { layout: group.layout, globals: context?.globals };
+      const nextContext = { layout: group.layout, globals: context?.globals, root: context?.root };
       (entity.elements || []).forEach((child) => {
         renderEntity(child, group.body, nextContext);
       });
@@ -137,6 +145,211 @@ export function createRenderer({ state, createResultView, playElementSound, serv
       }, interval);
       polls.set(element.id, timer);
       runServerCommand(element.id, element.command.server, { value: element.value });
+    }
+  }
+
+  function renderNavbar(navbar, context) {
+    const side = normalizeNavbarSide(navbar.side);
+    const orientation = side === 'left' || side === 'right' ? 'vertical' : 'horizontal';
+    const nav = document.createElement('nav');
+    nav.className = 'ui-navbar';
+    nav.dataset.side = side;
+    nav.dataset.orientation = orientation;
+    if (navbar.id) {
+      nav.dataset.navbarId = navbar.id;
+    }
+    if (navbar.classes) {
+      nav.className += ` ${navbar.classes}`;
+    }
+    if (navbar.background) {
+      nav.style.background = navbar.background;
+    }
+    if (navbar.color) {
+      nav.style.color = navbar.color;
+    }
+    if (navbar.border) {
+      nav.style.border = navbar.border;
+    }
+    if (navbar.font) {
+      nav.style.fontFamily = navbar.font;
+    }
+
+    const inner = document.createElement('div');
+    inner.className = 'ui-navbar-inner';
+    nav.appendChild(inner);
+
+    if (navbar.label) {
+      const title = document.createElement('div');
+      title.className = 'ui-navbar-title';
+      title.textContent = navbar.label;
+      inner.appendChild(title);
+    }
+
+    const items = document.createElement('div');
+    items.className = 'ui-navbar-items';
+    const gapSource = navbar.gap ?? context?.globals?.theme?.gap ?? 8;
+    const gapValue = Number(gapSource);
+    if (Number.isFinite(gapValue)) {
+      items.style.gap = `${gapValue}px`;
+    }
+    const alignment = mapNavbarAlign(navbar.align);
+    if (orientation === 'horizontal') {
+      items.style.justifyContent = alignment;
+      items.style.alignItems = 'center';
+      items.style.flexWrap = 'wrap';
+    } else {
+      items.style.justifyContent = alignment;
+      items.style.alignItems = alignment === 'flex-start' || alignment === 'center' || alignment === 'flex-end' ? alignment : 'stretch';
+      items.style.flexWrap = 'nowrap';
+    }
+    inner.appendChild(items);
+
+    (navbar.elements || []).forEach((child) => {
+      renderNavbarItem(child, items, orientation);
+    });
+
+    mountNavbar(nav, side);
+  }
+
+  function renderNavbarItem(element, container, orientation) {
+    if (!element || typeof element !== 'object') {
+      return;
+    }
+
+    if (element.id) {
+      elementIndex.set(element.id, element);
+    }
+
+    const item = document.createElement('div');
+    item.className = 'ui-navbar-item';
+    item.dataset.elementId = element.id;
+    if (element.classes) {
+      item.className += ` ${element.classes}`;
+    }
+    if (element.tooltip) {
+      item.title = element.tooltip;
+    }
+    if (element.font) {
+      item.style.fontFamily = element.font;
+    }
+    if (element.color) {
+      item.style.color = element.color;
+    }
+    if (element.bg) {
+      item.style.background = element.bg;
+      item.style.borderRadius = '9999px';
+      item.style.padding = orientation === 'vertical' ? '0.65rem 0.85rem' : '0.35rem 0.85rem';
+    }
+    container.appendChild(item);
+
+    if (element.type !== 'button' && element.label) {
+      const label = document.createElement('span');
+      label.className = 'ui-navbar-item-label';
+      label.textContent = element.label;
+      item.appendChild(label);
+    }
+
+    let anchor = null;
+    switch (element.type) {
+      case 'button':
+        anchor = renderButton(element, item);
+        break;
+      case 'toggle':
+        anchor = renderToggle(element, item);
+        break;
+      case 'stepper':
+        anchor = renderStepper(element, item);
+        break;
+      case 'input':
+        anchor = renderInput(element, item);
+        break;
+      case 'output':
+        anchor = renderOutput(element, item);
+        break;
+      default:
+        item.textContent = `Unsupported type: ${element.type}`;
+        return;
+    }
+
+    const view = createResultView(element, item, anchor || item);
+    views.set(element.id, view);
+    activateElement(element);
+  }
+
+  function ensureNavbarHost(side) {
+    if (!navbarHosts.has(side)) {
+      const host = document.createElement('div');
+      host.className = `ui-navbar-host ui-navbar-host-${side}`;
+      document.body.appendChild(host);
+      navbarHosts.set(side, host);
+      if (!navbarResizeHandlerAttached) {
+        window.addEventListener('resize', updateBodyPadding);
+        navbarResizeHandlerAttached = true;
+      }
+    }
+    const host = navbarHosts.get(side);
+    if (typeof ResizeObserver !== 'undefined') {
+      if (!navbarResizeObserver) {
+        navbarResizeObserver = new ResizeObserver(() => updateBodyPadding());
+      }
+      navbarResizeObserver.observe(host);
+    }
+    return host;
+  }
+
+  function mountNavbar(nav, side) {
+    const host = ensureNavbarHost(side);
+    host.appendChild(nav);
+    updateBodyPadding();
+  }
+
+  function updateBodyPadding() {
+    const body = document.body;
+    const topHost = navbarHosts.get('top');
+    const bottomHost = navbarHosts.get('bottom');
+    const leftHost = navbarHosts.get('left');
+    const rightHost = navbarHosts.get('right');
+
+    const topPadding = measureHostSize(topHost, 'height');
+    const bottomPadding = measureHostSize(bottomHost, 'height');
+    const leftPadding = measureHostSize(leftHost, 'width');
+    const rightPadding = measureHostSize(rightHost, 'width');
+
+    body.style.paddingTop = topPadding ? `${topPadding}px` : '';
+    body.style.paddingBottom = bottomPadding ? `${bottomPadding}px` : '';
+    body.style.paddingLeft = leftPadding ? `${leftPadding}px` : '';
+    body.style.paddingRight = rightPadding ? `${rightPadding}px` : '';
+  }
+
+  function measureHostSize(host, dimension) {
+    if (!host || host.childElementCount === 0) {
+      return 0;
+    }
+    const rect = host.getBoundingClientRect();
+    return dimension === 'width' ? rect.width : rect.height;
+  }
+
+  function normalizeNavbarSide(value) {
+    const side = String(value || '').toLowerCase();
+    return side === 'bottom' || side === 'left' || side === 'right' ? side : 'top';
+  }
+
+  function mapNavbarAlign(value) {
+    const align = String(value || '').toLowerCase();
+    switch (align) {
+      case 'center':
+        return 'center';
+      case 'end':
+        return 'flex-end';
+      case 'space-between':
+        return 'space-between';
+      case 'space-around':
+        return 'space-around';
+      case 'space-evenly':
+        return 'space-evenly';
+      case 'start':
+      default:
+        return 'flex-start';
     }
   }
 

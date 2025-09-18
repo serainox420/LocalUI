@@ -6,7 +6,7 @@ import { createRenderer } from './renderers.js';
 import { createServerActions } from './server.js';
 import { playElementSound } from './sound.js';
 
-export function initializeApp(root, config) {
+export function initializeApp(root, appConfig = {}) {
   const state = createAppState();
   const overlay = createOverlayManager();
   const createResultView = createResultViewFactory(overlay);
@@ -18,11 +18,14 @@ export function initializeApp(root, config) {
     server,
   });
 
-  const globals = config.globals || {};
+  const config = appConfig && typeof appConfig === 'object' ? appConfig : {};
+  const globals = config.globals && typeof config.globals === 'object' ? config.globals : {};
   const rootLayout = setupLayout(root, globals);
-  const rootContext = { layout: rootLayout, globals };
+  const rootContext = { layout: rootLayout, globals, root };
 
-  (config.elements || []).forEach((element) => {
+  const elements = Array.isArray(config.elements) ? config.elements : [];
+
+  elements.forEach((element) => {
     renderer.renderEntity(element, root, rootContext);
   });
 

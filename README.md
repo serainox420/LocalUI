@@ -121,6 +121,18 @@ Create `config/ui.json` following the structure below. Each element describes a 
 - Audio files are loaded from `public/sound/`. Place your own media there, such as `click.mp3` or `error.mp3`.
 - To differentiate between normal interactions and errors, you can provide an object: `"sound": { "interaction": "click.mp3", "error": "error.mp3" }`.
 
+### Navbar element
+
+- Add a persistent toolbar by using an element with `"type": "navbar"`.
+- The bar sticks to the screen edge defined by `"side"` (`"top"`, `"bottom"`, `"left"`, or `"right"`). The default is `"top"`.
+- Populate the `"elements"` array with regular UI definitions (buttons, toggles, inputs, outputs, and so on). They behave like standalone controls, including command execution and result presentations.
+- Optional properties:
+  - `"label"` — renders a title on the bar.
+  - `"align"` — controls item alignment (`"start"`, `"center"`, `"end"`, `"space-between"`, `"space-around"`, or `"space-evenly"`).
+  - `"gap"` — overrides spacing between items.
+  - `"defaults"` — merged into every navbar item, useful for setting a shared presentation mode or timeout.
+- The layout automatically adds body padding so the navbar does not obscure the main grid.
+
 ## Notes
 - Only binaries listed in `whitelist` are executed. The server resolves binaries via the `PATH` environment.
 - Arguments with forbidden shell metacharacters are rejected before execution.
