@@ -1016,20 +1016,31 @@
     }
   }
 
+  function shouldDisplayResult(element, hadPending) {
+    if (!element) {
+      return hadPending;
+    }
+    if (element.type === 'output' && element.mode === 'poll') {
+      return true;
+    }
+    return hadPending;
+  }
+
   function applyResult(elementId, payload) {
+    const element = elementIndex.get(elementId);
     const view = views.get(elementId);
-    if (!view) {
-      consumeUserAction(elementId);
-      return;
-    }
-    if (!payload || !payload.result) {
-      consumeUserAction(elementId);
-      return;
-    }
-    view.showResult(payload);
     const hadPending = consumeUserAction(elementId);
+
+    if (!view || !payload || !payload.result) {
+      return;
+    }
+
+    if (!shouldDisplayResult(element, hadPending)) {
+      return;
+    }
+
+    view.showResult(payload);
     if (hadPending && payload.result.ok === false) {
-      const element = elementIndex.get(elementId);
       playElementSound(element, 'error');
     }
   }
@@ -1043,14 +1054,16 @@
   }
 
   function showError(elementId, message) {
+    const element = elementIndex.get(elementId);
     const view = views.get(elementId);
-    if (!view) {
-      consumeUserAction(elementId);
+    const hadPending = consumeUserAction(elementId);
+
+    if (!view || !shouldDisplayResult(element, hadPending)) {
       return;
     }
+
     view.showError(message);
-    if (consumeUserAction(elementId)) {
-      const element = elementIndex.get(elementId);
+    if (hadPending) {
       playElementSound(element, 'error');
     }
   }

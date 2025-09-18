@@ -1,6 +1,8 @@
 # LocalUI
 
 LocalUI is a tiny PHP web interface that renders controls defined in JSON and safely executes whitelisted shell commands on your machine. It is intended for localhost use with the built-in PHP server.
+<img width="1280" height="1302" alt="image" src="https://github.com/user-attachments/assets/b333ae00-905c-4c5d-984c-37e46820c7b2" />
+
 
 ## Requirements
 - PHP 8.1 or newer with `proc_open` enabled
