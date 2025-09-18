@@ -1,0 +1,228 @@
+{
+  "globals": {
+    "theme": {
+      "palette": {
+        "primary": "#111827",
+        "accent": "#F97316",
+        "surface": "#0B1120",
+        "muted": "#FCD34D",
+        "danger": "#F87171"
+      },
+      "font": "'Fira Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+      "margins": 28,
+      "gap": 18,
+      "layout": "stack"
+    },
+    "defaults": {
+      "w": 12,
+      "h": 3,
+      "classes": "rounded-lg border border-amber-500/30 bg-slate-950/60 shadow-lg"
+    }
+  },
+  "elements": [
+    {
+      "id": "statusBoard",
+      "type": "group",
+      "label": "Live status",
+      "layout": "grid",
+      "columns": 12,
+      "gap": 14,
+      "border": "1px solid rgba(249, 115, 22, 0.35)",
+      "background": "rgba(17, 24, 39, 0.75)",
+      "elements": [
+        {
+          "id": "uptimeStatus",
+          "type": "output",
+          "label": "Uptime",
+          "command": { "server": { "id": "triage_uptime", "template": "uptime" } },
+          "mode": "poll",
+          "intervalMs": 10000,
+          "presentation": "inline",
+          "timeoutMs": 0,
+          "w": 6,
+          "h": 2,
+          "x": 0,
+          "y": 0
+        },
+        {
+          "id": "clock",
+          "type": "output",
+          "label": "Clock",
+          "command": { "server": { "id": "triage_clock", "template": "date \"+%Y-%m-%d %H:%M:%S\"" } },
+          "mode": "poll",
+          "intervalMs": 1000,
+          "presentation": "inline",
+          "timeoutMs": 0,
+          "w": 6,
+          "h": 2,
+          "x": 6,
+          "y": 0
+        },
+        {
+          "id": "hostIdentity",
+          "type": "output",
+          "label": "Hostname",
+          "command": { "server": { "id": "triage_hostname", "template": "hostname" } },
+          "mode": "manual",
+          "onDemandButtonLabel": "Read host",
+          "presentation": "tooltip",
+          "timeoutMs": 4000,
+          "w": 6,
+          "h": 2,
+          "x": 0,
+          "y": 2
+        },
+        {
+          "id": "environmentSnapshot",
+          "type": "button",
+          "label": "Capture environment",
+          "sound": "click.mp3",
+          "command": { "server": { "id": "triage_env", "template": "env" } },
+          "presentation": "modal",
+          "timeoutMs": 9000,
+          "w": 12,
+          "h": 2,
+          "x": 0,
+          "y": 4
+        }
+      ]
+    },
+    {
+      "id": "logInspector",
+      "type": "group",
+      "label": "Log inspector",
+      "layout": "grid",
+      "columns": 12,
+      "gap": 12,
+      "border": true,
+      "background": "rgba(30, 41, 59, 0.6)",
+      "elements": [
+        {
+          "id": "logLines",
+          "type": "stepper",
+          "label": "Tail lines",
+          "min": 20,
+          "max": 200,
+          "step": 20,
+          "value": 60,
+          "command": { "server": { "id": "triage_log_depth", "template": "tail -n ${value} /var/log/dpkg.log" } },
+          "presentation": "popover",
+          "timeoutMs": 6000,
+          "w": 4,
+          "h": 2,
+          "x": 0,
+          "y": 0
+        },
+        {
+          "id": "tailPreview",
+          "type": "output",
+          "label": "dpkg.log tail",
+          "command": { "server": { "id": "triage_tail", "template": "tail -n 40 /var/log/dpkg.log" } },
+          "mode": "manual",
+          "onDemandButtonLabel": "Tail log",
+          "presentation": "inline",
+          "timeoutMs": 7000,
+          "w": 8,
+          "h": 3,
+          "x": 4,
+          "y": 0
+        },
+        {
+          "id": "searchLogs",
+          "type": "input",
+          "label": "Search dpkg.log",
+          "inputType": "string",
+          "apply": {
+            "label": "Search",
+            "command": { "server": { "id": "triage_search", "template": "grep -n ${value} /var/log/dpkg.log" } }
+          },
+          "presentation": "modal",
+          "timeoutMs": 9000,
+          "w": 12,
+          "h": 3,
+          "x": 0,
+          "y": 3
+        }
+      ]
+    },
+    {
+      "id": "commandPad",
+      "type": "group",
+      "label": "Command pad",
+      "layout": "grid",
+      "columns": 12,
+      "gap": 14,
+      "border": "1px solid rgba(37, 99, 235, 0.35)",
+      "background": "rgba(15, 23, 42, 0.65)",
+      "elements": [
+        {
+          "id": "listWorkspace",
+          "type": "button",
+          "label": "List workspace",
+          "sound": "click.mp3",
+          "command": { "server": { "id": "triage_list_workspace", "template": "ls -lah /workspace" } },
+          "presentation": "popover",
+          "timeoutMs": 6000,
+          "w": 4,
+          "h": 2,
+          "x": 0,
+          "y": 0
+        },
+        {
+          "id": "osRelease",
+          "type": "button",
+          "label": "OS release",
+          "sound": "click.mp3",
+          "command": { "server": { "id": "triage_os_release", "template": "cat /etc/os-release" } },
+          "presentation": "modal",
+          "timeoutMs": 8000,
+          "w": 4,
+          "h": 2,
+          "x": 4,
+          "y": 0
+        },
+        {
+          "id": "deployToggle",
+          "type": "toggle",
+          "label": "Deploy freeze",
+          "sound": "click.mp3",
+          "onCommand": { "server": { "id": "triage_freeze_on", "template": "echo Deployments frozen" } },
+          "offCommand": { "server": { "id": "triage_freeze_off", "template": "echo Deployments resumed" } },
+          "initial": true,
+          "presentation": "inline",
+          "timeoutMs": 0,
+          "w": 4,
+          "h": 2,
+          "x": 8,
+          "y": 0
+        },
+        {
+          "id": "currentUser",
+          "type": "output",
+          "label": "Current user",
+          "command": { "server": { "id": "triage_user", "template": "whoami" } },
+          "mode": "manual",
+          "onDemandButtonLabel": "Check user",
+          "presentation": "tooltip",
+          "timeoutMs": 4000,
+          "w": 4,
+          "h": 2,
+          "x": 0,
+          "y": 2
+        }
+      ]
+    }
+  ],
+  "whitelist": [
+    "uptime",
+    "date",
+    "hostname",
+    "env",
+    "tail",
+    "grep",
+    "cat",
+    "ls",
+    "echo",
+    "whoami"
+  ]
+}
