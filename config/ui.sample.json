@@ -22,16 +22,25 @@
       "defaults": { "presentation": "notification", "timeoutMs": 4000 },
       "elements": [
         {
-          "id": "navFastfetch",
+          "id": "navMainLayout",
           "type": "button",
-          "label": "Run fastfetch",
-          "command": { "server": { "id": "fastfetchQuick", "template": "fastfetch --logo none" } }
+          "label": "Main layout",
+          "tooltip": "Reload the primary controls",
+          "command": {
+            "client": {
+              "loadConfig": {
+                "useDefault": true,
+                "label": "Primary interface",
+                "loadingMessage": "Loading main interface…"
+              }
+            }
+          }
         },
         {
-          "id": "navSwitchUi",
+          "id": "navAltLayout",
           "type": "button",
           "label": "Alternate layout",
-          "tooltip": "Load another interface without reloading",
+          "tooltip": "Load the alternate grid without reloading",
           "command": {
             "client": {
               "loadConfig": {
@@ -41,6 +50,57 @@
               }
             }
           }
+        },
+        {
+          "id": "navOpsLayout",
+          "type": "button",
+          "label": "Ops board",
+          "tooltip": "Switch to the operations dashboard",
+          "command": {
+            "client": {
+              "loadConfig": {
+                "name": "ui.ops",
+                "label": "Operations board",
+                "loadingMessage": "Opening operations board…"
+              }
+            }
+          }
+        },
+        {
+          "id": "navDiagnosticsLayout",
+          "type": "button",
+          "label": "Diagnostics",
+          "tooltip": "Open the diagnostics-focused controls",
+          "command": {
+            "client": {
+              "loadConfig": {
+                "name": "ui.diagnostics",
+                "label": "Diagnostics interface",
+                "loadingMessage": "Loading diagnostics tools…"
+              }
+            }
+          }
+        },
+        {
+          "id": "navMediaLayout",
+          "type": "button",
+          "label": "Media deck",
+          "tooltip": "Jump to media controls",
+          "command": {
+            "client": {
+              "loadConfig": {
+                "name": "ui.media",
+                "label": "Media control deck",
+                "loadingMessage": "Loading media controls…"
+              }
+            }
+          }
+        },
+        {
+          "id": "navFastfetch",
+          "type": "button",
+          "label": "Run fastfetch",
+          "command": { "server": { "id": "fastfetchQuick", "template": "fastfetch --logo none" } }
         },
         {
           "id": "navViewFile",
