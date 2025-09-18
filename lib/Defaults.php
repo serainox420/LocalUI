@@ -14,7 +14,7 @@ class Defaults
                         'muted' => '#94A3B8',
                         'danger' => '#F87171',
                     ],
-                    'font' => 'Roboto, "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    'font' => '\'JetBrainsMono Nerd Font\', \'JetBrains Mono\', \'Fira Code\', ui-monospace, \'SFMono-Regular\', Menlo, Monaco, Consolas, \'Liberation Mono\', \'Courier New\', monospace',
                     'margins' => 12,
                     'gap' => 8,
                     'layout' => 'grid',

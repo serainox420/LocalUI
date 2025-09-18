@@ -6,7 +6,7 @@
         "accent": "#0EA5E9",
         "surface": "#020817"
       },
-      "font": "Roboto",
+      "font": "'JetBrainsMono Nerd Font', 'JetBrains Mono', 'Fira Code', ui-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
       "margins": 24,
       "gap": 16,
       "layout": "grid"
@@ -32,6 +32,7 @@
           "type": "button",
           "label": "Check uptime",
           "tooltip": "Shows the uptime as a toast notification",
+          "sound": "click.mp3",
           "command": { "server": { "id": "uptime", "template": "uptime" } },
           "presentation": "notification",
           "timeoutMs": 4000,
@@ -44,6 +45,7 @@
           "id": "mute",
           "type": "toggle",
           "label": "Mute",
+          "sound": "click.mp3",
           "onCommand": { "server": { "id": "mute", "template": "pactl set-sink-mute @DEFAULT_SINK@ 1" } },
           "offCommand": { "server": { "id": "unmute", "template": "pactl set-sink-mute @DEFAULT_SINK@ 0" } },
           "initial": false,
@@ -148,6 +150,7 @@
           "label": "Disk usage",
           "command": { "server": { "id": "diskUsage", "template": "df -h /" } },
           "mode": "manual",
+          "sound": "click.mp3",
           "onDemandButtonLabel": "Check disk",
           "presentation": "popover",
           "timeoutMs": 6000,
