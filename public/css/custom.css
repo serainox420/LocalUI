@@ -13,6 +13,7 @@
   --shadow-hover: 0 32px 75px -35px rgba(15, 23, 42, 0.95);
   --primary-color: #4338ca;
   --accent-color: #8b5cf6;
+  --ui-fade-duration: 420ms;
 }
 
 body {
@@ -84,7 +85,7 @@ body {
 
 .component-card pre,
 .result-block {
-  font-family: 'JetBrains Mono', 'Fira Code', 'SFMono-Regular', ui-monospace, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-family: 'JetBrainsMono Nerd Font', 'JetBrains Mono', 'Fira Code', 'SFMono-Regular', ui-monospace, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 }
 
 .result-inline {
@@ -172,6 +173,15 @@ body {
   padding: 1.1rem 1.25rem;
   pointer-events: auto;
   color: var(--text-primary);
+}
+
+.ui-fadeable {
+  opacity: 1;
+  transition: opacity var(--ui-fade-duration) ease;
+}
+
+.ui-fadeable.is-fading {
+  opacity: 0;
 }
 
 .ui-surface-body {

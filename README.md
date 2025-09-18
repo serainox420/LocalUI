@@ -48,7 +48,7 @@ Create `config/ui.json` following the structure below. Each element describes a 
   "globals": {
     "theme": {
       "palette": { "primary": "#111827", "accent": "#10B981" },
-      "font": "Inter",
+      "font": "'JetBrainsMono Nerd Font', 'JetBrains Mono', 'Fira Code', ui-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
       "margins": 12,
       "gap": 8,
       "layout": "grid"
@@ -60,6 +60,7 @@ Create `config/ui.json` following the structure below. Each element describes a 
       "id": "btnCat",
       "type": "button",
       "label": "View /etc/hosts",
+      "sound": "click.mp3",
       "command": { "server": { "id": "catHosts", "template": "cat /etc/hosts" } },
       "tooltip": "Show hosts file",
       "w": 6
@@ -111,6 +112,12 @@ Create `config/ui.json` following the structure below. Each element describes a 
   "whitelist": ["cat", "env", "fastfetch", "pactl"]
 }
 ```
+
+### Interaction sounds
+
+- Add an optional `sound` property to an element to play audio when the user interacts with it. For example: `"sound": "click.mp3"`.
+- Audio files are loaded from `public/sound/`. Place your own media there, such as `click.mp3` or `error.mp3`.
+- To differentiate between normal interactions and errors, you can provide an object: `"sound": { "interaction": "click.mp3", "error": "error.mp3" }`.
 
 ## Notes
 - Only binaries listed in `whitelist` are executed. The server resolves binaries via the `PATH` environment.
