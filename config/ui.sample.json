@@ -15,6 +15,31 @@
   },
   "elements": [
     {
+      "id": "quickActions",
+      "type": "navbar",
+      "label": "Quick actions",
+      "side": "top",
+      "defaults": { "presentation": "notification", "timeoutMs": 4000 },
+      "elements": [
+        {
+          "id": "navFastfetch",
+          "type": "button",
+          "label": "Run fastfetch",
+          "command": { "server": { "id": "fastfetchQuick", "template": "fastfetch --logo none" } }
+        },
+        {
+          "id": "navViewFile",
+          "type": "input",
+          "label": "Preview file",
+          "inputType": "string",
+          "apply": {
+            "label": "Open",
+            "command": { "server": { "id": "navCatFile", "template": "cat ${value}" } }
+          }
+        }
+      ]
+    },
+    {
       "id": "systemControls",
       "type": "group",
       "label": "System controls",
