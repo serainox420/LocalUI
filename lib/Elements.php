@@ -39,10 +39,6 @@ class Elements
             return self::normalizeGroup($definition, $defaults, $seen, $commands);
         }
 
-        if ($definition['type'] === 'navbar') {
-            return self::normalizeNavbar($definition, $defaults, $seen, $commands);
-        }
-
         if (!in_array($definition['type'], self::SUPPORTED_TYPES, true)) {
             throw new InvalidArgumentException('Unsupported element type: ' . $definition['type']);
         }
@@ -106,61 +102,6 @@ class Elements
         $group['elements'] = $children;
 
         return $group;
-    }
-
-    private static function normalizeNavbar(array $navbar, array $defaults, array &$seen, array &$commands): array
-    {
-        $navbar['classes'] = trim((string) ($navbar['classes'] ?? ''));
-
-        $side = strtolower((string) ($navbar['side'] ?? ''));
-        $navbar['side'] = in_array($side, ['top', 'bottom', 'left', 'right'], true) ? $side : 'top';
-
-        $align = strtolower((string) ($navbar['align'] ?? ''));
-        $alignments = ['start', 'center', 'end', 'space-between', 'space-around', 'space-evenly'];
-        $navbar['align'] = in_array($align, $alignments, true) ? $align : 'start';
-
-        if (isset($navbar['gap'])) {
-            $navbar['gap'] = max(0, (int) $navbar['gap']);
-        } else {
-            $navbar['gap'] = null;
-        }
-
-        if (array_key_exists('background', $navbar)) {
-            $navbar['background'] = (string) $navbar['background'];
-        }
-        if (array_key_exists('color', $navbar)) {
-            $navbar['color'] = (string) $navbar['color'];
-        }
-        if (array_key_exists('border', $navbar)) {
-            $navbar['border'] = (string) $navbar['border'];
-        }
-        if (array_key_exists('font', $navbar)) {
-            $navbar['font'] = (string) $navbar['font'];
-        }
-        if (isset($navbar['label'])) {
-            $navbar['label'] = (string) $navbar['label'];
-        }
-
-        if (!array_key_exists('elements', $navbar)) {
-            $navbar['elements'] = [];
-        }
-        if (!is_array($navbar['elements'])) {
-            throw new InvalidArgumentException('Navbar elements must be an array for navbar ' . $navbar['id']);
-        }
-
-        $childDefaults = $defaults;
-        if (isset($navbar['defaults']) && is_array($navbar['defaults'])) {
-            $childDefaults = array_replace($childDefaults, $navbar['defaults']);
-        }
-        unset($navbar['defaults']);
-
-        $children = [];
-        foreach ($navbar['elements'] as $child) {
-            $children[] = self::normalizeDefinition($child, $childDefaults, $seen, $commands);
-        }
-        $navbar['elements'] = $children;
-
-        return $navbar;
     }
 
     private static function normalizeCoordinate($value): ?int

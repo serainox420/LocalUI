@@ -29,7 +29,7 @@ export function initializeApp(root, appConfig = {}) {
   const config = appConfig && typeof appConfig === 'object' ? appConfig : {};
   const globals = config.globals && typeof config.globals === 'object' ? config.globals : {};
   const rootLayout = setupLayout(root, globals);
-  const rootContext = { layout: rootLayout, globals, root };
+  const rootContext = { layout: rootLayout, globals };
 
   const elements = Array.isArray(config.elements) ? config.elements : [];
 
