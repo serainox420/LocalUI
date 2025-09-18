@@ -1,22 +1,27 @@
 {
   "globals": {
     "theme": {
-      "palette": { "primary": "#111827", "accent": "#10B981" },
-      "font": "Inter",
-      "margins": 12,
-      "gap": 8,
+      "palette": {
+        "primary": "#4338CA",
+        "accent": "#0EA5E9",
+        "surface": "#020817"
+      },
+      "font": "Roboto",
+      "margins": 24,
+      "gap": 16,
       "layout": "grid"
     },
-    "defaults": { "w": 12, "h": 2, "classes": "" }
+    "defaults": { "w": 6, "h": 2, "classes": "" }
   },
   "elements": [
     {
-      "id": "btnCat",
+      "id": "uptimeInfo",
       "type": "button",
-      "label": "View /etc/hosts",
-      "command": { "server": { "id": "catHosts", "template": "cat /etc/hosts" } },
-      "tooltip": "Show hosts file",
-      "w": 6
+      "label": "Check uptime",
+      "tooltip": "Shows the uptime as a toast notification",
+      "command": { "server": { "id": "uptime", "template": "uptime" } },
+      "presentation": "notification",
+      "timeoutMs": 4000
     },
     {
       "id": "mute",
@@ -24,7 +29,9 @@
       "label": "Mute",
       "onCommand": { "server": { "id": "mute", "template": "pactl set-sink-mute @DEFAULT_SINK@ 1" } },
       "offCommand": { "server": { "id": "unmute", "template": "pactl set-sink-mute @DEFAULT_SINK@ 0" } },
-      "initial": false
+      "initial": false,
+      "presentation": "inline",
+      "timeoutMs": 0
     },
     {
       "id": "stepVol",
@@ -34,14 +41,21 @@
       "max": 150,
       "step": 5,
       "value": 50,
-      "command": { "server": { "id": "setVol", "template": "pactl set-sink-volume @DEFAULT_SINK@ ${value}%" } }
+      "command": { "server": { "id": "setVol", "template": "pactl set-sink-volume @DEFAULT_SINK@ ${value}%" } },
+      "presentation": "popover",
+      "timeoutMs": 5000
     },
     {
       "id": "inpFile",
       "type": "input",
       "label": "File path",
       "inputType": "string",
-      "apply": { "label": "Apply", "command": { "server": { "id": "catFile", "template": "cat ${value}" } } }
+      "apply": {
+        "label": "Preview",
+        "command": { "server": { "id": "catFile", "template": "cat ${value}" } }
+      },
+      "presentation": "modal",
+      "timeoutMs": 8000
     },
     {
       "id": "envOut",
@@ -49,9 +63,11 @@
       "label": "Environment",
       "command": { "server": { "id": "printEnv", "template": "env" } },
       "mode": "poll",
-      "intervalMs": 3000,
+      "intervalMs": 5000,
+      "presentation": "inline",
+      "timeoutMs": 0,
       "w": 12,
-      "h": 6
+      "h": 4
     },
     {
       "id": "fastfetch",
@@ -59,8 +75,44 @@
       "label": "Fastfetch",
       "command": { "server": { "id": "fastfetch", "template": "fastfetch --logo none" } },
       "mode": "manual",
-      "onDemandButtonLabel": "Refresh"
+      "onDemandButtonLabel": "Refresh",
+      "presentation": "modal",
+      "timeoutMs": 9000,
+      "w": 12,
+      "h": 3
+    },
+    {
+      "id": "diskUsage",
+      "type": "output",
+      "label": "Disk usage",
+      "command": { "server": { "id": "diskUsage", "template": "df -h /" } },
+      "mode": "manual",
+      "onDemandButtonLabel": "Check disk",
+      "presentation": "popover",
+      "timeoutMs": 6000
+    },
+    {
+      "id": "hostname",
+      "type": "output",
+      "label": "Hostname",
+      "command": { "server": { "id": "hostname", "template": "hostname" } },
+      "mode": "manual",
+      "onDemandButtonLabel": "Read host",
+      "presentation": "tooltip",
+      "timeoutMs": 3000
+    },
+    {
+      "id": "journalTail",
+      "type": "output",
+      "label": "Latest system log entries",
+      "command": { "server": { "id": "tailSyslog", "template": "tail -n 20 /var/log/syslog" } },
+      "mode": "poll",
+      "intervalMs": 15000,
+      "presentation": "notification",
+      "timeoutMs": 7000,
+      "w": 12,
+      "h": 2
     }
   ],
-  "whitelist": ["cat", "env", "fastfetch", "pactl"]
+  "whitelist": ["cat", "df", "env", "fastfetch", "hostname", "pactl", "tail", "uptime"]
 }
