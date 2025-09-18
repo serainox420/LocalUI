@@ -9,6 +9,7 @@ export function createOverlayManager() {
   const floatingLayer = document.createElement('div');
   floatingLayer.className = 'ui-floating-layer pointer-events-none fixed inset-0 z-[2050]';
   document.body.appendChild(floatingLayer);
+  ensureFloatingLayerHitbox();
 
   const modalScrim = document.createElement('div');
   modalScrim.className = 'ui-modal-scrim fixed inset-0 z-[2100] hidden items-center justify-center p-6';
@@ -43,7 +44,7 @@ export function createOverlayManager() {
     const surface = createSurface(content, tone, {
       closable: settings.closable,
       onClose: () => {
-        surface.remove();
+        removeFloating(surface);
       },
     });
     surface.classList.add('ui-floating');
@@ -52,7 +53,7 @@ export function createOverlayManager() {
     }
 
     floatingLayer.appendChild(surface);
-    floatingLayer.classList.remove('pointer-events-none');
+    ensureFloatingLayerHitbox();
 
     requestAnimationFrame(() => {
       positionFloating(surface, anchor, settings.variant);
@@ -60,10 +61,7 @@ export function createOverlayManager() {
 
     if (timeoutMs > 0) {
       scheduleFadeOut(surface, timeoutMs, () => {
-        surface.remove();
-        if (!floatingLayer.hasChildNodes()) {
-          floatingLayer.classList.add('pointer-events-none');
-        }
+        removeFloating(surface);
       });
     }
 
@@ -147,10 +145,7 @@ export function createOverlayManager() {
       : null;
 
     if (!reference) {
-      surface.remove();
-      if (!floatingLayer.hasChildNodes()) {
-        floatingLayer.classList.add('pointer-events-none');
-      }
+      removeFloating(surface);
       return;
     }
 
@@ -176,6 +171,21 @@ export function createOverlayManager() {
 
   function toneFor(value) {
     return ['success', 'error', 'info'].includes(value) ? value : 'info';
+  }
+
+  function removeFloating(surface) {
+    if (surface && typeof surface.remove === 'function') {
+      surface.remove();
+    }
+    ensureFloatingLayerHitbox();
+  }
+
+  function ensureFloatingLayerHitbox() {
+    // Keep the floating layer transparent to pointer events so only the
+    // visible surfaces receive focus and clicks. This allows the rest of the
+    // UI to remain interactive when popups are present.
+    floatingLayer.classList.add('pointer-events-none');
+    floatingLayer.style.pointerEvents = 'none';
   }
 
   return { showNotification, showTooltip, showPopover, showModal };
