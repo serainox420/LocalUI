@@ -25,6 +25,7 @@ Then open [http://localhost:8000](http://localhost:8000) in your browser.
 ## API endpoints
 - `POST /api/run` — Trigger a command. Payload example: `{ "id": "envOut", "commandId": "printEnv", "args": { "value": "optional" } }`
 - `GET /api/read?id=envOut` — Read the most recently stored result for the given element or command.
+- `GET /api/config?name=ui.alt` — Reload the UI using another configuration file located under `config/`. Omit `name` to reload `config/ui.json`.
 
 Responses include:
 ```json

@@ -1,0 +1,321 @@
+{
+  "globals": {
+    "theme": {
+      "palette": {
+        "primary": "#111827",
+        "accent": "#38BDF8",
+        "surface": "#0F172A",
+        "muted": "#64748B"
+      },
+      "font": "'Source Code Pro', 'JetBrains Mono', 'Fira Code', ui-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+      "margins": 18,
+      "gap": 10,
+      "layout": "grid"
+    },
+    "defaults": { "w": 4, "h": 2, "classes": "" }
+  },
+  "elements": [
+    {
+      "id": "diagNavbar",
+      "type": "navbar",
+      "label": "Diagnostics center",
+      "side": "top",
+      "gap": 10,
+      "defaults": { "presentation": "notification", "timeoutMs": 3200 },
+      "elements": [
+        {
+          "id": "navDiagMain",
+          "type": "button",
+          "label": "Main layout",
+          "command": {
+            "server": {
+              "id": "navDiagMain",
+              "template": "echo 'Switching to main layout'"
+            },
+            "client": {
+              "loadConfig": {
+                "useDefault": true,
+                "label": "Primary interface",
+                "loadingMessage": "Loading main interface…"
+              }
+            }
+          }
+        },
+        {
+          "id": "navDiagAlt",
+          "type": "button",
+          "label": "Alternate layout",
+          "command": {
+            "server": {
+              "id": "navDiagAlt",
+              "template": "echo 'Switching to alternate layout'"
+            },
+            "client": {
+              "loadConfig": {
+                "name": "ui.alt",
+                "label": "Alternate interface",
+                "loadingMessage": "Loading alternate interface…"
+              }
+            }
+          }
+        },
+        {
+          "id": "navDiagOps",
+          "type": "button",
+          "label": "Ops board",
+          "command": {
+            "server": {
+              "id": "navDiagOps",
+              "template": "echo 'Switching to operations board'"
+            },
+            "client": {
+              "loadConfig": {
+                "name": "ui.ops",
+                "label": "Operations board",
+                "loadingMessage": "Opening operations board…"
+              }
+            }
+          }
+        },
+        {
+          "id": "navDiagDiag",
+          "type": "button",
+          "label": "Diagnostics",
+          "tooltip": "Reload diagnostics view",
+          "bg": "rgba(56, 189, 248, 0.18)",
+          "color": "#38BDF8",
+          "command": {
+            "server": {
+              "id": "navDiagDiag",
+              "template": "echo 'Reloading diagnostics interface'"
+            },
+            "client": {
+              "loadConfig": {
+                "name": "ui.diagnostics",
+                "label": "Diagnostics interface",
+                "loadingMessage": "Loading diagnostics tools…"
+              }
+            }
+          }
+        },
+        {
+          "id": "navDiagMedia",
+          "type": "button",
+          "label": "Media deck",
+          "command": {
+            "server": {
+              "id": "navDiagMedia",
+              "template": "echo 'Switching to media deck'"
+            },
+            "client": {
+              "loadConfig": {
+                "name": "ui.media",
+                "label": "Media control deck",
+                "loadingMessage": "Loading media controls…"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "diagChecks",
+      "type": "group",
+      "label": "Health checks",
+      "w": 12,
+      "h": 6,
+      "columns": 3,
+      "gap": 10,
+      "border": true,
+      "background": "rgba(15, 23, 42, 0.45)",
+      "elements": [
+        {
+          "id": "diagCpuDetail",
+          "type": "button",
+          "label": "CPU details",
+          "tooltip": "Inspect CPU characteristics",
+          "command": { "server": { "id": "diagCpuDetail", "template": "lscpu | head -n 15" } },
+          "presentation": "modal",
+          "timeoutMs": 7000,
+          "w": 1
+        },
+        {
+          "id": "diagMemoryUsage",
+          "type": "button",
+          "label": "Memory usage",
+          "command": { "server": { "id": "diagMemoryUsage", "template": "free -h" } },
+          "presentation": "notification",
+          "timeoutMs": 4000,
+          "w": 1
+        },
+        {
+          "id": "diagDiskUsage",
+          "type": "button",
+          "label": "Disk usage",
+          "command": { "server": { "id": "diagDiskUsage", "template": "df -h" } },
+          "presentation": "notification",
+          "timeoutMs": 4000,
+          "w": 1
+        },
+        {
+          "id": "diagSocketSummary",
+          "type": "button",
+          "label": "Socket summary",
+          "command": { "server": { "id": "diagSocketSummary", "template": "ss -s" } },
+          "presentation": "notification",
+          "timeoutMs": 5000,
+          "w": 1
+        },
+        {
+          "id": "diagTopProcesses",
+          "type": "button",
+          "label": "CPU processes",
+          "command": {
+            "server": {
+              "id": "diagTopProcesses",
+              "template": "ps aux --sort=-%cpu | head -n 8"
+            }
+          },
+          "presentation": "modal",
+          "timeoutMs": 7000,
+          "w": 1
+        },
+        {
+          "id": "diagUptime",
+          "type": "button",
+          "label": "System uptime",
+          "command": { "server": { "id": "diagUptime", "template": "uptime" } },
+          "presentation": "tooltip",
+          "timeoutMs": 3500,
+          "w": 1
+        }
+      ]
+    },
+    {
+      "id": "diagSnapshots",
+      "type": "group",
+      "label": "Snapshots",
+      "w": 12,
+      "h": 6,
+      "columns": 3,
+      "gap": 10,
+      "border": true,
+      "background": "rgba(15, 23, 42, 0.35)",
+      "elements": [
+        {
+          "id": "diagLoadAverage",
+          "type": "output",
+          "label": "Load average",
+          "command": { "server": { "id": "diagLoadAverage", "template": "cat /proc/loadavg" } },
+          "mode": "poll",
+          "intervalMs": 8000,
+          "presentation": "inline",
+          "timeoutMs": 0,
+          "h": 3,
+          "w": 1
+        },
+        {
+          "id": "diagMemorySnapshot",
+          "type": "output",
+          "label": "Memory snapshot",
+          "command": {
+            "server": {
+              "id": "diagMemorySnapshot",
+              "template": "cat /proc/meminfo | head -n 8"
+            }
+          },
+          "mode": "manual",
+          "onDemandButtonLabel": "Read meminfo",
+          "presentation": "popover",
+          "timeoutMs": 6000,
+          "h": 3,
+          "w": 1
+        },
+        {
+          "id": "diagDiskLayout",
+          "type": "output",
+          "label": "Block devices",
+          "command": { "server": { "id": "diagDiskLayout", "template": "lsblk" } },
+          "mode": "manual",
+          "onDemandButtonLabel": "Show devices",
+          "presentation": "modal",
+          "timeoutMs": 7000,
+          "h": 3,
+          "w": 1
+        }
+      ]
+    },
+    {
+      "id": "diagLogTools",
+      "type": "group",
+      "label": "Log tools",
+      "w": 12,
+      "h": 5,
+      "columns": 3,
+      "gap": 10,
+      "border": true,
+      "background": "rgba(15, 23, 42, 0.3)",
+      "elements": [
+        {
+          "id": "diagSearchLogs",
+          "type": "input",
+          "label": "Search logs",
+          "inputType": "string",
+          "apply": {
+            "label": "Search",
+            "command": {
+              "server": {
+                "id": "diagSearchLogs",
+                "template": "grep -i ${value} /var/log/syslog | tail -n 20"
+              }
+            }
+          },
+          "presentation": "modal",
+          "timeoutMs": 8000,
+          "w": 1,
+          "h": 3
+        },
+        {
+          "id": "diagVerboseToggle",
+          "type": "toggle",
+          "label": "Verbose mode",
+          "onCommand": { "server": { "id": "diagVerboseOn", "template": "printf 'Verbose diagnostics enabled\\n'" } },
+          "offCommand": { "server": { "id": "diagVerboseOff", "template": "printf 'Verbose diagnostics disabled\\n'" } },
+          "initial": false,
+          "presentation": "notification",
+          "timeoutMs": 3200,
+          "w": 1,
+          "h": 3
+        },
+        {
+          "id": "diagSampleWindow",
+          "type": "stepper",
+          "label": "Sample window (s)",
+          "min": 5,
+          "max": 60,
+          "step": 5,
+          "value": 15,
+          "command": { "server": { "id": "diagSampleWindow", "template": "printf 'Sampling window set to %s seconds\\n' ${value}" } },
+          "presentation": "tooltip",
+          "timeoutMs": 4000,
+          "w": 1,
+          "h": 3
+        }
+      ]
+    }
+  ],
+  "whitelist": [
+    "cat",
+    "df",
+    "free",
+    "grep",
+    "head",
+    "lscpu",
+    "lsblk",
+    "printf",
+    "ps",
+    "ss",
+    "tail",
+    "uptime"
+  ]
+}

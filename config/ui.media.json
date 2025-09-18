@@ -1,0 +1,287 @@
+{
+  "globals": {
+    "theme": {
+      "palette": {
+        "primary": "#1E1B4B",
+        "accent": "#F472B6",
+        "surface": "#0F172A",
+        "muted": "#94A3B8"
+      },
+      "font": "'Space Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+      "margins": 16,
+      "gap": 12,
+      "layout": "grid"
+    },
+    "defaults": { "w": 4, "h": 2, "classes": "" }
+  },
+  "elements": [
+    {
+      "id": "mediaNavbar",
+      "type": "navbar",
+      "label": "Media control deck",
+      "side": "top",
+      "defaults": { "presentation": "notification", "timeoutMs": 3200 },
+      "elements": [
+        {
+          "id": "navMediaMain",
+          "type": "button",
+          "label": "Main layout",
+          "command": {
+            "server": {
+              "id": "navMediaMain",
+              "template": "echo 'Switching to main layout'"
+            },
+            "client": {
+              "loadConfig": {
+                "useDefault": true,
+                "label": "Primary interface",
+                "loadingMessage": "Loading main interface…"
+              }
+            }
+          }
+        },
+        {
+          "id": "navMediaAlt",
+          "type": "button",
+          "label": "Alternate layout",
+          "command": {
+            "server": {
+              "id": "navMediaAlt",
+              "template": "echo 'Switching to alternate layout'"
+            },
+            "client": {
+              "loadConfig": {
+                "name": "ui.alt",
+                "label": "Alternate interface",
+                "loadingMessage": "Loading alternate interface…"
+              }
+            }
+          }
+        },
+        {
+          "id": "navMediaOps",
+          "type": "button",
+          "label": "Ops board",
+          "command": {
+            "server": {
+              "id": "navMediaOps",
+              "template": "echo 'Switching to operations board'"
+            },
+            "client": {
+              "loadConfig": {
+                "name": "ui.ops",
+                "label": "Operations board",
+                "loadingMessage": "Opening operations board…"
+              }
+            }
+          }
+        },
+        {
+          "id": "navMediaDiag",
+          "type": "button",
+          "label": "Diagnostics",
+          "command": {
+            "server": {
+              "id": "navMediaDiag",
+              "template": "echo 'Switching to diagnostics interface'"
+            },
+            "client": {
+              "loadConfig": {
+                "name": "ui.diagnostics",
+                "label": "Diagnostics interface",
+                "loadingMessage": "Loading diagnostics tools…"
+              }
+            }
+          }
+        },
+        {
+          "id": "navMediaMedia",
+          "type": "button",
+          "label": "Media deck",
+          "tooltip": "Reload media deck",
+          "bg": "rgba(244, 114, 182, 0.18)",
+          "color": "#F472B6",
+          "command": {
+            "server": {
+              "id": "navMediaMedia",
+              "template": "echo 'Reloading media deck'"
+            },
+            "client": {
+              "loadConfig": {
+                "name": "ui.media",
+                "label": "Media control deck",
+                "loadingMessage": "Loading media controls…"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "mediaPlayback",
+      "type": "group",
+      "label": "Playback",
+      "w": 12,
+      "h": 4,
+      "columns": 4,
+      "gap": 12,
+      "border": true,
+      "background": "rgba(30, 27, 75, 0.4)",
+      "elements": [
+        {
+          "id": "mediaPlayPause",
+          "type": "button",
+          "label": "Play / Pause",
+          "sound": "click.mp3",
+          "command": { "server": { "id": "mediaPlayPause", "template": "playerctl play-pause" } },
+          "presentation": "notification",
+          "timeoutMs": 3200,
+          "w": 1
+        },
+        {
+          "id": "mediaNext",
+          "type": "button",
+          "label": "Next track",
+          "command": { "server": { "id": "mediaNext", "template": "playerctl next" } },
+          "presentation": "notification",
+          "timeoutMs": 3200,
+          "w": 1
+        },
+        {
+          "id": "mediaPrevious",
+          "type": "button",
+          "label": "Previous track",
+          "command": { "server": { "id": "mediaPrevious", "template": "playerctl previous" } },
+          "presentation": "notification",
+          "timeoutMs": 3200,
+          "w": 1
+        },
+        {
+          "id": "mediaShuffle",
+          "type": "toggle",
+          "label": "Shuffle",
+          "onCommand": { "server": { "id": "mediaShuffleOn", "template": "playerctl shuffle On" } },
+          "offCommand": { "server": { "id": "mediaShuffleOff", "template": "playerctl shuffle Off" } },
+          "initial": false,
+          "presentation": "notification",
+          "timeoutMs": 3200,
+          "w": 1
+        }
+      ]
+    },
+    {
+      "id": "mediaAudio",
+      "type": "group",
+      "label": "Audio",
+      "w": 12,
+      "h": 4,
+      "columns": 3,
+      "gap": 12,
+      "border": true,
+      "background": "rgba(15, 23, 42, 0.35)",
+      "elements": [
+        {
+          "id": "mediaVolume",
+          "type": "stepper",
+          "label": "Volume",
+          "min": 0,
+          "max": 150,
+          "step": 5,
+          "value": 60,
+          "command": { "server": { "id": "mediaVolume", "template": "pactl set-sink-volume @DEFAULT_SINK@ ${value}%" } },
+          "presentation": "tooltip",
+          "timeoutMs": 4000,
+          "w": 1
+        },
+        {
+          "id": "mediaMute",
+          "type": "toggle",
+          "label": "Mute",
+          "onCommand": { "server": { "id": "mediaMute", "template": "pactl set-sink-mute @DEFAULT_SINK@ 1" } },
+          "offCommand": { "server": { "id": "mediaUnmute", "template": "pactl set-sink-mute @DEFAULT_SINK@ 0" } },
+          "initial": false,
+          "presentation": "notification",
+          "timeoutMs": 3200,
+          "w": 1
+        },
+        {
+          "id": "mediaOutputs",
+          "type": "button",
+          "label": "List outputs",
+          "command": { "server": { "id": "mediaOutputs", "template": "pactl list short sinks" } },
+          "presentation": "modal",
+          "timeoutMs": 7000,
+          "w": 1
+        }
+      ]
+    },
+    {
+      "id": "mediaLibrary",
+      "type": "group",
+      "label": "Library",
+      "w": 12,
+      "h": 5,
+      "columns": 3,
+      "gap": 12,
+      "border": true,
+      "background": "rgba(15, 23, 42, 0.3)",
+      "elements": [
+        {
+          "id": "mediaQueue",
+          "type": "input",
+          "label": "Queue track",
+          "inputType": "string",
+          "apply": {
+            "label": "Queue",
+            "command": { "server": { "id": "mediaQueue", "template": "printf 'Queued %s\\n' ${value}" } }
+          },
+          "presentation": "notification",
+          "timeoutMs": 3200,
+          "w": 1,
+          "h": 3
+        },
+        {
+          "id": "mediaNowPlaying",
+          "type": "output",
+          "label": "Now playing",
+          "command": {
+            "server": {
+              "id": "mediaNowPlaying",
+              "template": "playerctl metadata --format 'Now playing: {{title}} — {{artist}}'"
+            }
+          },
+          "mode": "poll",
+          "intervalMs": 4000,
+          "presentation": "inline",
+          "timeoutMs": 0,
+          "w": 1,
+          "h": 3
+        },
+        {
+          "id": "mediaPlaylist",
+          "type": "output",
+          "label": "Library sample",
+          "command": {
+            "server": {
+              "id": "mediaPlaylist",
+              "template": "ls -1 /music | head -n 20"
+            }
+          },
+          "mode": "manual",
+          "onDemandButtonLabel": "List tracks",
+          "presentation": "popover",
+          "timeoutMs": 6000,
+          "w": 1,
+          "h": 3
+        }
+      ]
+    }
+  ],
+  "whitelist": [
+    "head",
+    "ls",
+    "pactl",
+    "playerctl",
+    "printf"
+  ]
+}

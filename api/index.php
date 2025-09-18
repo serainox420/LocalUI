@@ -25,6 +25,11 @@ if ($route === 'read' && $method === 'GET') {
     return;
 }
 
+if ($route === 'config' && $method === 'GET') {
+    handle_config();
+    return;
+}
+
 Core::sendError('Not Found', 404);
 
 function handle_run(): void
@@ -80,4 +85,71 @@ function handle_read(): void
     }
 
     Core::sendJson($record);
+}
+
+function handle_config(): void
+{
+    $name = isset($_GET['name']) ? trim((string) $_GET['name']) : '';
+    $path = null;
+
+    if ($name !== '') {
+        [$resolved, $error] = resolve_config_path($name);
+        if ($error === 'invalid') {
+            Core::sendError('Invalid configuration name.', 400);
+        }
+        if ($error === 'missing') {
+            Core::sendError('Configuration not found: ' . $name, 404);
+        }
+        $path = $resolved;
+    }
+
+    try {
+        $config = Core::loadConfig($path);
+    } catch (Throwable $e) {
+        Core::sendError($e->getMessage(), 500);
+    }
+
+    Core::sendJson([
+        'ok' => true,
+        'config' => $config,
+        'profile' => $name,
+    ]);
+}
+
+function resolve_config_path(string $name): array
+{
+    $trimmed = trim($name);
+    if ($trimmed === '') {
+        return [null, null];
+    }
+
+    if (str_contains($trimmed, '..') || str_starts_with($trimmed, '/')) {
+        return [null, 'invalid'];
+    }
+
+    $normalized = str_replace('\\', '/', $trimmed);
+    if (!preg_match('/^[A-Za-z0-9_\-\/\.]+$/', $normalized)) {
+        return [null, 'invalid'];
+    }
+
+    $configDir = realpath(__DIR__ . '/../config');
+    if ($configDir === false) {
+        return [null, 'invalid'];
+    }
+
+    $candidate = $configDir . '/' . $normalized;
+    if (!str_ends_with($normalized, '.json')) {
+        $candidate .= '.json';
+    }
+
+    if (!is_file($candidate)) {
+        return [null, 'missing'];
+    }
+
+    $resolved = realpath($candidate);
+    if ($resolved === false || strpos($resolved, $configDir) !== 0) {
+        return [null, 'invalid'];
+    }
+
+    return [$resolved, null];
 }

@@ -34,6 +34,13 @@ export function createAppState() {
     polls.clear();
   }
 
+  function reset() {
+    stopAllPolls();
+    views.clear();
+    elementIndex.clear();
+    pendingUserActions.clear();
+  }
+
   return {
     polls,
     views,
@@ -41,5 +48,6 @@ export function createAppState() {
     markUserAction,
     consumeUserAction,
     stopAllPolls,
+    reset,
   };
 }
