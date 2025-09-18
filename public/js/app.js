@@ -1,90 +1,86 @@
 (function () {
   const configEl = document.getElementById('app-config');
-  const appRoot = document.getElementById('app');
-  if (!configEl || !appRoot) {
+  const root = document.getElementById('app');
+  if (!configEl || !root) {
     return;
   }
 
-  let config;
+  let config = {};
   try {
     config = JSON.parse(configEl.textContent || '{}');
-  } catch (err) {
-    console.error('Failed to parse UI config', err);
+  } catch (error) {
+    console.error('Invalid UI config', error);
     return;
   }
 
-  const state = {
-    config,
-    views: {},
-    polling: {},
-    results: {},
-  };
+  const polls = new Map();
+  const views = new Map();
 
-  setupLayout(appRoot, config.globals || {});
+  setupLayout(root, config.globals);
 
   (config.elements || []).forEach((element) => {
-    try {
-      renderElement(element);
-      hydrateLastResult(element.id);
-    } catch (err) {
-      console.error('Failed to render element', element, err);
+    const card = buildCard(element);
+    root.appendChild(card);
+    hydrate(element.id);
+
+    if (element.type === 'output' && element.mode === 'poll' && element.command?.server) {
+      const interval = Number(element.intervalMs) || 5000;
+      const timer = setInterval(() => {
+        runServerCommand(element.id, element.command.server, { value: element.value });
+      }, interval);
+      polls.set(element.id, timer);
+      runServerCommand(element.id, element.command.server, { value: element.value });
     }
   });
 
   window.addEventListener('beforeunload', () => {
-    Object.values(state.polling).forEach((intervalId) => clearInterval(intervalId));
+    polls.forEach((timer) => clearInterval(timer));
   });
 
-  function setupLayout(root, globals) {
-    root.className = '';
-    const layout = (globals.theme && globals.theme.layout) || 'grid';
-    const gap = (globals.theme && globals.theme.gap) || 8;
-    const margins = (globals.theme && globals.theme.margins) || 12;
+  function setupLayout(container, globals = {}) {
+    container.className = '';
+    const theme = globals.theme || {};
+    const layout = theme.layout || 'grid';
+    const gap = theme.gap ?? 8;
+    const margin = theme.margins ?? 12;
 
     if (layout === 'grid') {
-      root.classList.add('grid', 'grid-cols-1', 'md:grid-cols-12', 'auto-rows-min');
+      container.classList.add('grid', 'auto-rows-min', 'sm:grid-cols-2', 'xl:grid-cols-12');
     } else {
-      root.classList.add('flex', 'flex-col');
+      container.classList.add('flex', 'flex-col');
     }
-    root.classList.add('min-h-screen', 'box-border');
-    root.style.padding = `${margins}px`;
-    root.style.gap = `${gap}px`;
+    container.style.gap = `${gap}px`;
+    container.style.padding = `${margin}px`;
   }
 
-  function renderElement(element) {
-    const card = document.createElement('div');
-    card.dataset.elementId = element.id;
-    card.className = 'component-card bg-white/90 shadow-sm rounded-lg border border-slate-200 p-4 flex flex-col space-y-3 transition-all duration-150';
-    card.className += element.classes ? ` ${element.classes}` : '';
-    card.style.gridColumn = `span ${element.w || 12} / span ${element.w || 12}`;
-    card.style.gridRow = `span ${element.h || 1} / span ${element.h || 1}`;
-    if (element.bg) {
-      card.style.backgroundColor = element.bg;
+  function buildCard(element) {
+    const section = document.createElement('section');
+    section.dataset.elementId = element.id;
+    section.className = 'rounded-lg border border-slate-200 bg-white shadow-sm p-4 flex flex-col gap-3';
+    if (element.classes) {
+      section.className += ` ${element.classes}`;
     }
-    if (element.color) {
-      card.style.color = element.color;
-    }
-    if (element.font) {
-      card.style.fontFamily = element.font;
-    }
-    if (element.tooltip) {
-      card.title = element.tooltip;
-    }
+    const spanW = element.w || 12;
+    const spanH = element.h || 1;
+    section.style.gridColumn = `span ${spanW} / span ${spanW}`;
+    section.style.gridRow = `span ${spanH} / span ${spanH}`;
+    if (element.bg) section.style.backgroundColor = element.bg;
+    if (element.color) section.style.color = element.color;
+    if (element.font) section.style.fontFamily = element.font;
+    if (element.tooltip) section.title = element.tooltip;
 
-    const header = document.createElement('div');
-    header.className = 'flex items-center justify-between';
-    const title = document.createElement('h2');
-    title.className = 'text-sm font-semibold tracking-wide text-slate-700 uppercase';
-    title.textContent = element.label || element.id;
-    header.appendChild(title);
-    card.appendChild(header);
+    const header = document.createElement('header');
+    header.className = 'text-sm font-semibold text-slate-600 uppercase';
+    header.textContent = element.label || element.id;
+    section.appendChild(header);
 
     const body = document.createElement('div');
     body.className = 'flex flex-col gap-3 text-sm text-slate-700';
-    card.appendChild(body);
+    section.appendChild(body);
 
-    const view = attachResultView(card);
-    state.views[element.id] = view;
+    const result = createResultView();
+    views.set(element.id, result);
+    section.appendChild(result.wrapper);
 
     switch (element.type) {
       case 'button':
@@ -103,345 +99,193 @@
         renderOutput(element, body);
         break;
       default:
-        body.textContent = `Unsupported element type: ${element.type}`;
+        body.textContent = `Unsupported type: ${element.type}`;
     }
 
-    appRoot.appendChild(card);
+    return section;
   }
 
-  function attachResultView(card) {
+  function createResultView() {
     const wrapper = document.createElement('div');
-    wrapper.className = 'space-y-2 text-xs text-slate-600 hidden';
+    wrapper.className = 'flex flex-col gap-2 text-xs text-slate-600 hidden';
 
-    const meta = document.createElement('div');
-    meta.className = 'text-xs text-slate-500';
-    wrapper.appendChild(meta);
+    const status = document.createElement('div');
+    status.className = 'text-xs';
+    wrapper.appendChild(status);
 
     const stdout = document.createElement('pre');
-    stdout.className = 'bg-slate-900/95 text-slate-100 p-3 rounded-md overflow-auto max-h-64 whitespace-pre-wrap break-words text-xs';
+    stdout.className = 'rounded-md bg-slate-900 text-slate-100 p-3 whitespace-pre-wrap break-words max-h-64 overflow-auto';
     wrapper.appendChild(stdout);
 
     const stderr = document.createElement('pre');
-    stderr.className = 'bg-red-900/90 text-red-100 p-3 rounded-md overflow-auto max-h-48 whitespace-pre-wrap break-words text-xs hidden';
+    stderr.className = 'rounded-md bg-red-900/90 text-red-100 p-3 whitespace-pre-wrap break-words max-h-48 overflow-auto hidden';
     wrapper.appendChild(stderr);
 
-    card.appendChild(wrapper);
+    const error = document.createElement('div');
+    error.className = 'rounded-md bg-red-50 text-red-700 border border-red-200 px-3 py-2 hidden';
+    wrapper.appendChild(error);
 
-    return { wrapper, meta, stdout, stderr };
+    return { wrapper, status, stdout, stderr, error };
   }
 
   function renderButton(element, container) {
-    const button = createButton(element.label || 'Run', 'primary');
+    const button = makeButton(element.label || 'Run');
     container.appendChild(button);
 
     button.addEventListener('click', async () => {
-      if (element.command && element.command.server) {
-        await executeServerCommand(element.id, element.command.server, button);
-      }
-      if (element.command && element.command.client && element.command.client.script) {
-        runClientScript(element, element.command.client.script);
+      try {
+        if (element.command?.server) {
+          await runServerCommand(element.id, element.command.server, {});
+        }
+        if (element.command?.client?.script) {
+          executeClientScript(element, element.command.client.script);
+        }
+      } catch (error) {
+        // already shown to user
       }
     });
   }
 
   function renderToggle(element, container) {
     const row = document.createElement('div');
-    row.className = 'flex items-center justify-between gap-3';
+    row.className = 'flex items-center gap-3';
 
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.checked = !!element.initial;
-    checkbox.className = 'h-5 w-5 text-[var(--accent-color)] focus:ring-[var(--accent-color)] border-slate-300 rounded';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = Boolean(element.initial);
+    input.className = 'h-5 w-5 rounded border-slate-300 text-[var(--accent-color)] focus:ring-[var(--accent-color)]';
 
-    const status = document.createElement('span');
-    status.className = 'text-sm font-medium text-slate-600';
-    status.textContent = checkbox.checked ? 'On' : 'Off';
+    const label = document.createElement('span');
+    label.textContent = input.checked ? 'On' : 'Off';
 
-    row.appendChild(checkbox);
-    row.appendChild(status);
+    row.appendChild(input);
+    row.appendChild(label);
     container.appendChild(row);
 
-    checkbox.addEventListener('change', async () => {
-      status.textContent = checkbox.checked ? 'On' : 'Off';
-      const command = checkbox.checked ? element.onCommand?.server : element.offCommand?.server;
+    input.addEventListener('change', async () => {
+      const command = input.checked ? element.onCommand?.server : element.offCommand?.server;
+      label.textContent = input.checked ? 'On' : 'Off';
       if (!command) {
         return;
       }
+      input.disabled = true;
       try {
-        checkbox.disabled = true;
-        await executeServerCommand(element.id, command, null, { value: checkbox.checked });
-      } catch (err) {
-        checkbox.checked = !checkbox.checked;
-        status.textContent = checkbox.checked ? 'On' : 'Off';
-        showError(element.id, err.message);
+        await runServerCommand(element.id, command, { value: input.checked });
+      } catch (error) {
+        input.checked = !input.checked;
+        label.textContent = input.checked ? 'On' : 'Off';
       } finally {
-        checkbox.disabled = false;
+        input.disabled = false;
       }
     });
   }
 
   function renderStepper(element, container) {
-    const wrap = document.createElement('div');
-    wrap.className = 'flex items-center gap-2';
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-2';
 
-    const minus = createButton('−', 'secondary');
-    minus.classList.add('w-10');
-    const plus = createButton('+', 'secondary');
-    plus.classList.add('w-10');
-
+    const minus = makeButton('−', true);
+    const plus = makeButton('+', true);
     const input = document.createElement('input');
     input.type = 'number';
+    input.value = Number(element.value ?? element.min ?? 0);
+    if (element.min !== undefined) input.min = element.min;
+    if (element.max !== undefined) input.max = element.max;
+    if (element.step !== undefined) input.step = element.step;
     input.className = 'w-24 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--accent-color)] focus:ring-[var(--accent-color)]';
-    input.min = element.min;
-    input.max = element.max;
-    input.step = element.step;
-    input.value = element.value;
 
-    const apply = createButton('Apply', 'primary');
+    const apply = makeButton('Apply');
 
-    wrap.appendChild(minus);
-    wrap.appendChild(input);
-    wrap.appendChild(plus);
-    wrap.appendChild(apply);
-    container.appendChild(wrap);
-
-    const clamp = (value) => {
-      const min = Number(element.min);
-      const max = Number(element.max);
-      const step = Number(element.step) || 1;
-      let next = Number.isFinite(value) ? value : min;
-      if (next < min) next = min;
-      if (next > max) next = max;
-      next = Math.round(next / step) * step;
-      if (next < min) next = min;
-      if (next > max) next = max;
-      return next;
-    };
-
-    const triggerCommand = async (value) => {
-      if (!element.command || !element.command.server) {
+    minus.addEventListener('click', () => adjust(-1));
+    plus.addEventListener('click', () => adjust(1));
+    apply.addEventListener('click', async () => {
+      if (!element.command?.server) {
         return;
       }
-      await executeServerCommand(element.id, element.command.server, apply, { value });
-    };
-
-    minus.addEventListener('click', () => {
-      const current = Number(input.value);
-      const next = clamp(current - (Number(element.step) || 1));
-      input.value = next;
-      triggerCommand(next).catch((err) => showError(element.id, err.message));
+      try {
+        await runServerCommand(element.id, element.command.server, { value: Number(input.value) });
+      } catch (error) {
+        // shown already
+      }
     });
 
-    plus.addEventListener('click', () => {
-      const current = Number(input.value);
-      const next = clamp(current + (Number(element.step) || 1));
-      input.value = next;
-      triggerCommand(next).catch((err) => showError(element.id, err.message));
-    });
+    row.appendChild(minus);
+    row.appendChild(input);
+    row.appendChild(plus);
+    row.appendChild(apply);
+    container.appendChild(row);
 
-    apply.addEventListener('click', () => {
-      const next = clamp(Number(input.value));
-      input.value = next;
-      triggerCommand(next).catch((err) => showError(element.id, err.message));
-    });
-
-    input.addEventListener('change', () => {
-      const next = clamp(Number(input.value));
-      input.value = next;
-    });
+    function adjust(direction) {
+      const step = Number(element.step ?? 1);
+      const current = Number(input.value || 0);
+      let next = current + direction * step;
+      if (element.min !== undefined) next = Math.max(next, Number(element.min));
+      if (element.max !== undefined) next = Math.min(next, Number(element.max));
+      input.value = String(next);
+    }
   }
 
   function renderInput(element, container) {
-    const wrap = document.createElement('div');
-    wrap.className = 'flex flex-col gap-2';
+    const field = document.createElement('input');
+    field.className = 'rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--accent-color)] focus:ring-[var(--accent-color)]';
+    field.type = element.inputType === 'int' ? 'number' : 'text';
 
-    let inputControl;
-    let valueGetter;
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-2';
 
-    switch (element.inputType) {
-      case 'int':
-        inputControl = document.createElement('input');
-        inputControl.type = 'number';
-        inputControl.className = 'rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--accent-color)] focus:ring-[var(--accent-color)]';
-        valueGetter = () => Number(inputControl.value || 0);
-        break;
-      case 'bool':
-        inputControl = document.createElement('select');
-        inputControl.className = 'rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--accent-color)] focus:ring-[var(--accent-color)]';
-        const optFalse = document.createElement('option');
-        optFalse.value = 'false';
-        optFalse.textContent = 'False';
-        const optTrue = document.createElement('option');
-        optTrue.value = 'true';
-        optTrue.textContent = 'True';
-        inputControl.appendChild(optFalse);
-        inputControl.appendChild(optTrue);
-        valueGetter = () => inputControl.value === 'true';
-        break;
-      default:
-        inputControl = document.createElement('input');
-        inputControl.type = 'text';
-        inputControl.placeholder = element.placeholder || '';
-        inputControl.className = 'rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--accent-color)] focus:ring-[var(--accent-color)]';
-        valueGetter = () => inputControl.value;
-    }
+    const button = makeButton(element.apply?.label || 'Apply');
 
-    wrap.appendChild(inputControl);
+    row.appendChild(field);
+    row.appendChild(button);
+    container.appendChild(row);
 
-    if (element.apply && element.apply.command && element.apply.command.server) {
-      const button = createButton(element.apply.label || 'Apply', 'primary');
-      button.addEventListener('click', () => {
-        const raw = valueGetter();
-        const args = { value: raw };
-        executeServerCommand(element.id, element.apply.command.server, button, args).catch((err) => {
-          showError(element.id, err.message);
-        });
-      });
-      wrap.appendChild(button);
-    }
-
-    container.appendChild(wrap);
+    button.addEventListener('click', async () => {
+      if (!element.apply?.command?.server) {
+        return;
+      }
+      let value = field.value;
+      if (element.inputType === 'int') {
+        value = Number(value);
+      } else if (element.inputType === 'bool') {
+        value = value === 'true' || value === '1' || value === 'on';
+      }
+      try {
+        await runServerCommand(element.id, element.apply.command.server, { value });
+      } catch (error) {
+        // shown already
+      }
+    });
   }
 
   function renderOutput(element, container) {
-    const controls = document.createElement('div');
-    controls.className = 'flex items-center gap-2';
-
-    if (element.mode === 'manual' && element.command && element.command.server) {
-      const button = createButton(element.onDemandButtonLabel || 'Refresh', 'primary');
-      controls.appendChild(button);
-      button.addEventListener('click', () => {
-        executeServerCommand(element.id, element.command.server, button).catch((err) => {
-          showError(element.id, err.message);
-        });
+    if (element.mode === 'manual') {
+      const button = makeButton(element.onDemandButtonLabel || 'Refresh');
+      container.appendChild(button);
+      button.addEventListener('click', async () => {
+        if (!element.command?.server) {
+          return;
+        }
+        try {
+          await runServerCommand(element.id, element.command.server, {});
+        } catch (error) {
+          // shown already
+        }
       });
-    }
-
-    container.appendChild(controls);
-
-    if (element.mode === 'poll' && element.command && element.command.server) {
-      const interval = Math.max(500, Number(element.intervalMs) || 5000);
-      const run = () => {
-        executeServerCommand(element.id, element.command.server).catch((err) => {
-          showError(element.id, err.message);
-        });
-      };
-      run();
-      if (state.polling[element.id]) {
-        clearInterval(state.polling[element.id]);
-      }
-      state.polling[element.id] = setInterval(run, interval);
-    }
-  }
-
-  async function executeServerCommand(elementId, command, buttonEl, extraArgs) {
-    if (!command || !command.id) {
-      throw new Error('Missing command configuration');
-    }
-    if (buttonEl) {
-      setLoading(buttonEl, true);
-    }
-    const payload = {
-      id: elementId,
-      commandId: command.id,
-      args: extraArgs || {},
-    };
-
-    try {
-      const response = await fetch('/api/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json().catch(() => null);
-      if (!response.ok || !data) {
-        const message = (data && data.error) ? data.error : `Request failed with status ${response.status}`;
-        throw new Error(message);
-      }
-      applyResult(elementId, data);
-      return data;
-    } finally {
-      if (buttonEl) {
-        setLoading(buttonEl, false);
-      }
-    }
-  }
-
-  function applyResult(elementId, payload) {
-    const view = state.views[elementId];
-    if (!view) {
-      return;
-    }
-    const result = payload.result || payload;
-    const ok = !!payload.ok;
-    state.results[elementId] = result;
-
-    view.wrapper.classList.remove('hidden');
-    view.meta.textContent = `Exit ${result.code} · ${formatTimestamp(result.ts)}`;
-
-    if (result.stdout) {
-      view.stdout.textContent = result.stdout;
-      view.stdout.classList.remove('hidden');
     } else {
-      view.stdout.textContent = '';
-      view.stdout.classList.add('hidden');
-    }
-
-    if (result.stderr) {
-      view.stderr.textContent = result.stderr;
-      view.stderr.classList.remove('hidden');
-    } else {
-      view.stderr.textContent = '';
-      view.stderr.classList.add('hidden');
-    }
-
-    const card = getCard(elementId);
-    if (card) {
-      card.dataset.state = ok ? 'ok' : 'error';
-      card.classList.toggle('ring-2', !ok);
-      card.classList.toggle('ring-red-400', !ok);
-      if (ok) {
-        card.classList.remove('ring-2', 'ring-red-400');
-      }
+      const note = document.createElement('p');
+      note.className = 'text-xs text-slate-500';
+      note.textContent = `Polling every ${Math.max(Number(element.intervalMs) || 0, 1)} ms`;
+      container.appendChild(note);
     }
   }
 
-  function showError(elementId, message) {
-    const fallback = {
-      ok: false,
-      code: 'ERR',
-      stdout: '',
-      stderr: message,
-      ts: new Date().toISOString(),
-    };
-    applyResult(elementId, { ok: false, result: fallback });
-  }
-
-  function setLoading(button, loading) {
-    if (!button) return;
-    if (loading) {
-      if (!button.dataset.originalLabel) {
-        button.dataset.originalLabel = button.textContent;
-      }
-      button.textContent = 'Running…';
-      button.disabled = true;
-    } else {
-      if (button.dataset.originalLabel) {
-        button.textContent = button.dataset.originalLabel;
-        delete button.dataset.originalLabel;
-      }
-      button.disabled = false;
-    }
-  }
-
-  function createButton(label, variant) {
+  function makeButton(label, ghost) {
     const button = document.createElement('button');
     button.type = 'button';
-    const baseClasses = 'inline-flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 transition disabled:opacity-60 disabled:cursor-not-allowed';
-    if (variant === 'secondary') {
-      button.className = `${baseClasses} border border-slate-300 text-slate-700 hover:bg-slate-100 focus:ring-slate-400`;
+    if (ghost) {
+      button.className = 'inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-400';
     } else {
-      button.className = `${baseClasses} text-white bg-slate-900 hover:bg-slate-800 focus:ring-slate-500`;
+      button.className = 'inline-flex items-center justify-center rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500';
       button.style.backgroundColor = 'var(--primary-color)';
       button.style.borderColor = 'var(--primary-color)';
     }
@@ -449,40 +293,109 @@
     return button;
   }
 
-  function getCard(elementId) {
-    return document.querySelector(`[data-element-id="${elementId}"]`);
+  async function runServerCommand(elementId, command, args) {
+    if (!command?.id) {
+      showError(elementId, 'Command id missing');
+      throw new Error('Command id missing');
+    }
+
+    const payload = {
+      id: elementId,
+      commandId: command.id,
+      args: args || {},
+    };
+
+    let response;
+    try {
+      response = await fetch('/api/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch (error) {
+      showError(elementId, error.message);
+      throw error;
+    }
+
+    if (!response.ok) {
+      const message = await parseError(response);
+      showError(elementId, message);
+      throw new Error(message);
+    }
+
+    const data = await response.json();
+    applyResult(elementId, data);
+    return data;
   }
 
-  function formatTimestamp(ts) {
+  async function parseError(response) {
     try {
-      return new Date(ts).toLocaleString();
-    } catch (err) {
-      return ts;
+      const data = await response.json();
+      return data.error || response.statusText;
+    } catch (error) {
+      return response.statusText;
     }
   }
 
-  function runClientScript(element, script) {
-    try {
-      // eslint-disable-next-line no-new-func
-      const fn = new Function('element', 'state', script);
-      fn(element, state);
-    } catch (err) {
-      showError(element.id, err.message);
-    }
-  }
-
-  async function hydrateLastResult(elementId) {
+  async function hydrate(elementId) {
     try {
       const response = await fetch(`/api/read?id=${encodeURIComponent(elementId)}`);
       if (!response.ok) {
         return;
       }
       const data = await response.json();
-      if (data) {
-        applyResult(elementId, data);
-      }
-    } catch (err) {
-      console.warn('Unable to hydrate result', elementId, err);
+      applyResult(elementId, data);
+    } catch (error) {
+      console.warn('hydrate failed', elementId, error);
+    }
+  }
+
+  function applyResult(elementId, payload) {
+    if (!payload || !payload.result) {
+      return;
+    }
+    const view = views.get(elementId);
+    if (!view) {
+      return;
+    }
+
+    view.wrapper.classList.remove('hidden');
+    const { ok, code, stdout, stderr, ts } = payload.result;
+    const when = ts ? safeDate(ts) : '';
+    view.status.textContent = ok ? `OK • exit ${code} • ${when}` : `Error • exit ${code} • ${when}`;
+    view.status.className = ok ? 'text-xs text-green-600' : 'text-xs text-red-600';
+
+    view.stdout.textContent = stdout || '';
+    view.stderr.textContent = stderr || '';
+    view.stderr.classList.toggle('hidden', !stderr);
+    view.error.classList.add('hidden');
+  }
+
+  function safeDate(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+    return date.toLocaleString();
+  }
+
+  function showError(elementId, message) {
+    const view = views.get(elementId);
+    if (!view) {
+      return;
+    }
+    view.wrapper.classList.remove('hidden');
+    view.error.textContent = message;
+    view.error.classList.remove('hidden');
+  }
+
+  function executeClientScript(element, script) {
+    try {
+      // eslint-disable-next-line no-new-func
+      const fn = new Function('element', script);
+      fn(element);
+    } catch (error) {
+      showError(element.id, error.message);
     }
   }
 })();

@@ -8,28 +8,34 @@ class Elements
 
     public static function normalize(array $elements, array $globals): array
     {
+        $defaults = $globals['defaults'] ?? [];
         $normalized = [];
         $commands = [];
-        $ids = [];
-        foreach ($elements as $element) {
-            if (!is_array($element)) {
+        $seen = [];
+
+        foreach ($elements as $definition) {
+            if (!is_array($definition)) {
                 throw new InvalidArgumentException('Element definition must be an object.');
             }
-            if (empty($element['id']) || empty($element['type'])) {
+            if (empty($definition['id']) || empty($definition['type'])) {
                 throw new InvalidArgumentException('Each element requires an id and type.');
             }
-            $element['id'] = Defaults::sanitizeId((string) $element['id']);
-            if (!in_array($element['type'], self::SUPPORTED_TYPES, true)) {
-                throw new InvalidArgumentException('Unsupported element type: ' . $element['type']);
-            }
-            if (isset($ids[$element['id']])) {
-                throw new InvalidArgumentException('Duplicate element id: ' . $element['id']);
-            }
-            $ids[$element['id']] = true;
 
-            $element = self::applyDefaults($element, $globals);
-            $normalized[] = $element;
-            foreach (self::collectCommands($element) as $command) {
+            $definition['id'] = Defaults::sanitizeId((string) $definition['id']);
+            if (isset($seen[$definition['id']])) {
+                throw new InvalidArgumentException('Duplicate element id: ' . $definition['id']);
+            }
+            $seen[$definition['id']] = true;
+
+            if (!in_array($definition['type'], self::SUPPORTED_TYPES, true)) {
+                throw new InvalidArgumentException('Unsupported element type: ' . $definition['type']);
+            }
+
+            $definition = self::applyDefaults($definition, $defaults);
+            $definition = self::normalizeByType($definition);
+            $normalized[] = $definition;
+
+            foreach (self::commandsFor($definition) as $command) {
                 $commands[$command['id']] = $command;
             }
         }
@@ -37,72 +43,63 @@ class Elements
         return [$normalized, $commands];
     }
 
-    private static function applyDefaults(array $element, array $globals): array
+    private static function applyDefaults(array $element, array $defaults): array
     {
-        $defaults = $globals['defaults'] ?? [];
         foreach ($defaults as $key => $value) {
-            if (!isset($element[$key])) {
+            if (!array_key_exists($key, $element)) {
                 $element[$key] = $value;
             }
         }
 
-        if (!isset($element['classes'])) {
-            $element['classes'] = '';
-        }
-        if (!empty($defaults['classes']) && strpos($element['classes'], $defaults['classes']) === false) {
-            $element['classes'] = trim($element['classes'] . ' ' . $defaults['classes']);
+        if (!empty($defaults['classes'])) {
+            $existing = trim((string) ($element['classes'] ?? ''));
+            $element['classes'] = trim($existing . ' ' . $defaults['classes']);
+        } else {
+            $element['classes'] = $element['classes'] ?? '';
         }
 
+        return $element;
+    }
+
+    private static function normalizeByType(array $element): array
+    {
         switch ($element['type']) {
             case 'button':
                 $element['label'] = $element['label'] ?? $element['id'];
-                if (isset($element['command'])) {
-                    $element['command'] = self::normalizeCommandWrapper($element['command'], $element['id'], 'button');
-                }
+                $element['command'] = self::normalizeCommand($element['command'] ?? null, $element['id'], 'button');
                 break;
+
             case 'toggle':
                 $element['label'] = $element['label'] ?? $element['id'];
                 $element['initial'] = (bool) ($element['initial'] ?? false);
-                if (isset($element['onCommand'])) {
-                    $element['onCommand'] = self::normalizeCommandWrapper($element['onCommand'], $element['id'], 'on');
-                }
-                if (isset($element['offCommand'])) {
-                    $element['offCommand'] = self::normalizeCommandWrapper($element['offCommand'], $element['id'], 'off');
-                }
+                $element['onCommand'] = self::normalizeCommand($element['onCommand'] ?? null, $element['id'], 'on');
+                $element['offCommand'] = self::normalizeCommand($element['offCommand'] ?? null, $element['id'], 'off');
                 break;
+
             case 'stepper':
                 $element['label'] = $element['label'] ?? $element['id'];
                 $element['min'] = isset($element['min']) ? (int) $element['min'] : 0;
                 $element['max'] = isset($element['max']) ? (int) $element['max'] : 100;
                 $element['step'] = isset($element['step']) ? (int) $element['step'] : 1;
                 $element['value'] = isset($element['value']) ? (int) $element['value'] : $element['min'];
-                if ($element['value'] < $element['min']) {
-                    $element['value'] = $element['min'];
-                }
-                if ($element['value'] > $element['max']) {
-                    $element['value'] = $element['max'];
-                }
-                if (isset($element['command'])) {
-                    $element['command'] = self::normalizeCommandWrapper($element['command'], $element['id'], 'stepper');
-                }
+                $element['command'] = self::normalizeCommand($element['command'] ?? null, $element['id'], 'step');
                 break;
+
             case 'input':
                 $element['label'] = $element['label'] ?? $element['id'];
                 $element['inputType'] = $element['inputType'] ?? 'string';
                 if (isset($element['apply'])) {
-                    $element['apply'] = self::normalizeApply($element['apply'], $element['id']);
+                    $element['apply']['label'] = $element['apply']['label'] ?? 'Apply';
+                    $element['apply']['command'] = self::normalizeCommand($element['apply']['command'] ?? null, $element['id'], 'input');
                 }
                 break;
+
             case 'output':
                 $element['label'] = $element['label'] ?? $element['id'];
-                $element['mode'] = $element['mode'] ?? 'manual';
+                $element['mode'] = in_array($element['mode'] ?? '', ['poll', 'manual'], true) ? $element['mode'] : 'manual';
                 $element['intervalMs'] = isset($element['intervalMs']) ? (int) $element['intervalMs'] : 5000;
-                if (isset($element['command'])) {
-                    $element['command'] = self::normalizeCommandWrapper($element['command'], $element['id'], 'output');
-                }
-                if (!isset($element['onDemandButtonLabel'])) {
-                    $element['onDemandButtonLabel'] = 'Refresh';
-                }
+                $element['command'] = self::normalizeCommand($element['command'] ?? null, $element['id'], 'output');
+                $element['onDemandButtonLabel'] = $element['onDemandButtonLabel'] ?? 'Refresh';
                 if (!isset($element['h'])) {
                     $element['h'] = 4;
                 }
@@ -112,47 +109,33 @@ class Elements
         return $element;
     }
 
-    private static function normalizeCommandWrapper(array $commandWrapper, string $elementId, string $suffix): array
+    private static function normalizeCommand(?array $wrapper, string $elementId, string $suffix): ?array
     {
-        if (isset($commandWrapper['server'])) {
-            $commandWrapper['server'] = self::normalizeServerCommand($commandWrapper['server'], $elementId, $suffix);
-        } elseif (isset($commandWrapper['template'])) {
-            $commandWrapper = [
-                'server' => self::normalizeServerCommand($commandWrapper, $elementId, $suffix),
-            ];
+        if (!$wrapper) {
+            return null;
         }
 
-        if (isset($commandWrapper['client']) && is_array($commandWrapper['client'])) {
-            if (!isset($commandWrapper['client']['script'])) {
-                throw new InvalidArgumentException('Client command requires a script field.');
+        $server = $wrapper['server'] ?? $wrapper;
+        if (empty($server['template'])) {
+            throw new InvalidArgumentException('Server command template missing for element ' . $elementId);
+        }
+
+        $server['template'] = trim((string) $server['template']);
+        $server['id'] = Defaults::sanitizeId($server['id'] ?? ($elementId . '_' . $suffix));
+
+        $normalized = ['server' => $server];
+        if (isset($wrapper['client'])) {
+            $script = (string) ($wrapper['client']['script'] ?? '');
+            if ($script === '') {
+                throw new InvalidArgumentException('Client script cannot be empty for element ' . $elementId);
             }
-            $commandWrapper['client']['script'] = (string) $commandWrapper['client']['script'];
+            $normalized['client'] = ['script' => $script];
         }
 
-        return $commandWrapper;
+        return $normalized;
     }
 
-    private static function normalizeServerCommand(array $command, string $elementId, string $suffix): array
-    {
-        if (empty($command['template'])) {
-            throw new InvalidArgumentException('Server command template cannot be empty for element ' . $elementId);
-        }
-        $command['template'] = trim((string) $command['template']);
-        $command['id'] = Defaults::sanitizeId($command['id'] ?? ($elementId . '_' . $suffix));
-
-        return $command;
-    }
-
-    private static function normalizeApply(array $apply, string $elementId): array
-    {
-        $apply['label'] = $apply['label'] ?? 'Apply';
-        if (isset($apply['command'])) {
-            $apply['command'] = self::normalizeCommandWrapper($apply['command'], $elementId, 'input');
-        }
-        return $apply;
-    }
-
-    private static function collectCommands(array $element): array
+    private static function commandsFor(array $element): array
     {
         $commands = [];
         $candidates = [];
@@ -169,9 +152,7 @@ class Elements
                 $candidates[] = $element['command'] ?? null;
                 break;
             case 'input':
-                if (isset($element['apply'])) {
-                    $candidates[] = $element['apply']['command'] ?? null;
-                }
+                $candidates[] = $element['apply']['command'] ?? null;
                 break;
             case 'output':
                 $candidates[] = $element['command'] ?? null;
@@ -179,8 +160,8 @@ class Elements
         }
 
         foreach ($candidates as $candidate) {
-            if (isset($candidate['server']) && isset($candidate['server']['id'])) {
-                $commands[$candidate['server']['id']] = $candidate['server'];
+            if (isset($candidate['server'])) {
+                $commands[] = $candidate['server'];
             }
         }
 
