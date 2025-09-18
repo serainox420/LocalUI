@@ -25,17 +25,97 @@
       "type": "navbar",
       "label": "Alternate UI",
       "side": "top",
+      "defaults": { "presentation": "notification", "timeoutMs": 3200 },
       "elements": [
         {
-          "id": "altBack",
+          "id": "navAltMain",
           "type": "button",
-          "label": "Return to default",
+          "label": "Main layout",
           "command": {
+            "server": {
+              "id": "navAltMain",
+              "template": "echo 'Switching to main layout'"
+            },
             "client": {
               "loadConfig": {
                 "useDefault": true,
                 "label": "Default interface",
                 "loadingMessage": "Restoring default controls…"
+              }
+            }
+          }
+        },
+        {
+          "id": "navAltAlt",
+          "type": "button",
+          "label": "Alternate layout",
+          "tooltip": "Reload this stacked layout",
+          "bg": "rgba(236, 72, 153, 0.18)",
+          "color": "#EC4899",
+          "command": {
+            "server": {
+              "id": "navAltAlt",
+              "template": "echo 'Reloading alternate layout'"
+            },
+            "client": {
+              "loadConfig": {
+                "name": "ui.alt",
+                "label": "Alternate interface",
+                "loadingMessage": "Loading alternate interface…"
+              }
+            }
+          }
+        },
+        {
+          "id": "navAltOps",
+          "type": "button",
+          "label": "Ops board",
+          "command": {
+            "server": {
+              "id": "navAltOps",
+              "template": "echo 'Switching to operations board'"
+            },
+            "client": {
+              "loadConfig": {
+                "name": "ui.ops",
+                "label": "Operations board",
+                "loadingMessage": "Opening operations board…"
+              }
+            }
+          }
+        },
+        {
+          "id": "navAltDiagnostics",
+          "type": "button",
+          "label": "Diagnostics",
+          "command": {
+            "server": {
+              "id": "navAltDiagnostics",
+              "template": "echo 'Switching to diagnostics interface'"
+            },
+            "client": {
+              "loadConfig": {
+                "name": "ui.diagnostics",
+                "label": "Diagnostics interface",
+                "loadingMessage": "Loading diagnostics tools…"
+              }
+            }
+          }
+        },
+        {
+          "id": "navAltMedia",
+          "type": "button",
+          "label": "Media deck",
+          "command": {
+            "server": {
+              "id": "navAltMedia",
+              "template": "echo 'Switching to media deck'"
+            },
+            "client": {
+              "loadConfig": {
+                "name": "ui.media",
+                "label": "Media control deck",
+                "loadingMessage": "Loading media controls…"
               }
             }
           }
@@ -59,7 +139,8 @@
           "command": {
             "server": { "id": "fastfetch", "template": "fastfetch --logo none" }
           },
-          "onDemandButtonLabel": "Run fastfetch"
+          "onDemandButtonLabel": "Run fastfetch",
+          "w": 1
         },
         {
           "id": "altEnv",
@@ -70,7 +151,8 @@
           "command": {
             "server": { "id": "printEnv", "template": "env" }
           },
-          "onDemandButtonLabel": "Show env"
+          "onDemandButtonLabel": "Show env",
+          "w": 1
         },
         {
           "id": "altVolume",
@@ -82,7 +164,8 @@
           "value": 75,
           "command": {
             "server": { "id": "setVol", "template": "pactl set-sink-volume @DEFAULT_SINK@ ${value}%" }
-          }
+          },
+          "w": 1
         },
         {
           "id": "altMute",
@@ -94,7 +177,8 @@
           },
           "offCommand": {
             "server": { "id": "unmute", "template": "pactl set-sink-mute @DEFAULT_SINK@ 0" }
-          }
+          },
+          "w": 1
         }
       ]
     }
