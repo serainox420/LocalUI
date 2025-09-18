@@ -43,7 +43,7 @@ $surface = $config['globals']['theme']['palette']['surface'] ?? '#F8FAFC';
 <?php else: ?>
     <div id="app" class="min-h-screen"></div>
     <script id="app-config" type="application/json"><?= $embeddedConfig; ?></script>
-    <script src="/js/app.js" defer></script>
+    <script type="module" src="/js/app.js"></script>
 <?php endif; ?>
 </body>
 </html>
