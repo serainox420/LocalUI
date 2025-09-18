@@ -1,0 +1,257 @@
+{
+  "globals": {
+    "theme": {
+      "palette": {
+        "primary": "#0F172A",
+        "accent": "#22D3EE",
+        "surface": "#020617",
+        "muted": "#94A3B8",
+        "danger": "#FCA5A5"
+      },
+      "font": "'IBM Plex Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+      "margins": 24,
+      "gap": 16,
+      "layout": "grid"
+    },
+    "defaults": {
+      "w": 4,
+      "h": 2,
+      "classes": "rounded-xl border border-slate-700/60 bg-slate-900/60 backdrop-blur"
+    }
+  },
+  "elements": [
+    {
+      "id": "quickActions",
+      "type": "group",
+      "label": "Quick actions",
+      "w": 12,
+      "h": 3,
+      "x": 0,
+      "y": 0,
+      "columns": 12,
+      "gap": 12,
+      "border": true,
+      "background": "rgba(15, 23, 42, 0.6)",
+      "elements": [
+        {
+          "id": "uptimeCheck",
+          "type": "button",
+          "label": "Check uptime",
+          "tooltip": "Shows the current uptime as a toast notification",
+          "sound": "click.mp3",
+          "command": { "server": { "id": "ops_uptime", "template": "uptime" } },
+          "presentation": "notification",
+          "timeoutMs": 4000,
+          "w": 3,
+          "h": 2,
+          "x": 0,
+          "y": 0
+        },
+        {
+          "id": "activeUsers",
+          "type": "button",
+          "label": "Active users",
+          "tooltip": "Lists logged in users",
+          "sound": "click.mp3",
+          "command": { "server": { "id": "ops_who", "template": "who" } },
+          "presentation": "popover",
+          "timeoutMs": 5000,
+          "w": 3,
+          "h": 2,
+          "x": 3,
+          "y": 0
+        },
+        {
+          "id": "maintenanceToggle",
+          "type": "toggle",
+          "label": "Maintenance mode",
+          "sound": "click.mp3",
+          "onCommand": { "server": { "id": "ops_maintenance_on", "template": "echo Maintenance mode ENABLED" } },
+          "offCommand": { "server": { "id": "ops_maintenance_off", "template": "echo Maintenance mode DISABLED" } },
+          "initial": false,
+          "presentation": "inline",
+          "timeoutMs": 0,
+          "w": 3,
+          "h": 2,
+          "x": 6,
+          "y": 0
+        },
+        {
+          "id": "workspaceListing",
+          "type": "button",
+          "label": "List /workspace",
+          "tooltip": "Inspect files in /workspace",
+          "sound": "click.mp3",
+          "command": { "server": { "id": "ops_list_workspace", "template": "ls -lah /workspace" } },
+          "presentation": "popover",
+          "timeoutMs": 6000,
+          "w": 3,
+          "h": 2,
+          "x": 9,
+          "y": 0
+        }
+      ]
+    },
+    {
+      "id": "systemMonitors",
+      "type": "group",
+      "label": "System monitors",
+      "w": 8,
+      "h": 11,
+      "x": 0,
+      "y": 3,
+      "columns": 8,
+      "gap": 12,
+      "border": "1px solid rgba(148, 163, 184, 0.3)",
+      "background": "rgba(15, 23, 42, 0.5)",
+      "elements": [
+        {
+          "id": "diskUsage",
+          "type": "output",
+          "label": "Disk usage",
+          "command": { "server": { "id": "ops_disk_usage", "template": "df -h /" } },
+          "mode": "poll",
+          "intervalMs": 8000,
+          "presentation": "inline",
+          "timeoutMs": 0,
+          "w": 4,
+          "h": 3,
+          "x": 0,
+          "y": 0
+        },
+        {
+          "id": "memoryUsage",
+          "type": "output",
+          "label": "Memory usage",
+          "command": { "server": { "id": "ops_memory", "template": "free -h" } },
+          "mode": "poll",
+          "intervalMs": 8000,
+          "presentation": "inline",
+          "timeoutMs": 0,
+          "w": 4,
+          "h": 3,
+          "x": 4,
+          "y": 0
+        },
+        {
+          "id": "kernelInfo",
+          "type": "output",
+          "label": "Kernel",
+          "command": { "server": { "id": "ops_kernel", "template": "uname -a" } },
+          "mode": "manual",
+          "onDemandButtonLabel": "Show kernel info",
+          "presentation": "tooltip",
+          "timeoutMs": 5000,
+          "w": 8,
+          "h": 2,
+          "x": 0,
+          "y": 3
+        },
+        {
+          "id": "processTop",
+          "type": "output",
+          "label": "Top processes",
+          "command": { "server": { "id": "ops_processes", "template": "sh -c \"ps -eo pid,comm,%cpu,%mem --sort=-%mem | head -n 12\"" } },
+          "mode": "manual",
+          "onDemandButtonLabel": "Inspect processes",
+          "presentation": "modal",
+          "timeoutMs": 9000,
+          "w": 8,
+          "h": 3,
+          "x": 0,
+          "y": 5
+        },
+        {
+          "id": "dpkgTail",
+          "type": "output",
+          "label": "Recent package log",
+          "command": { "server": { "id": "ops_dpkg_tail", "template": "tail -n 40 /var/log/dpkg.log" } },
+          "mode": "poll",
+          "intervalMs": 15000,
+          "presentation": "notification",
+          "timeoutMs": 9000,
+          "w": 8,
+          "h": 3,
+          "x": 0,
+          "y": 8
+        }
+      ]
+    },
+    {
+      "id": "fileTools",
+      "type": "group",
+      "label": "File tools",
+      "w": 4,
+      "h": 11,
+      "x": 8,
+      "y": 3,
+      "columns": 4,
+      "gap": 12,
+      "border": "1px solid rgba(56, 189, 248, 0.35)",
+      "background": "rgba(30, 41, 59, 0.55)",
+      "elements": [
+        {
+          "id": "filePreview",
+          "type": "input",
+          "label": "Preview file",
+          "inputType": "string",
+          "tooltip": "Reads a text file",
+          "apply": {
+            "label": "Read file",
+            "command": { "server": { "id": "ops_read_file", "template": "cat ${value}" } }
+          },
+          "presentation": "modal",
+          "timeoutMs": 8000,
+          "w": 4,
+          "h": 4,
+          "x": 0,
+          "y": 0
+        },
+        {
+          "id": "logDepth",
+          "type": "stepper",
+          "label": "Log tail lines",
+          "min": 10,
+          "max": 100,
+          "step": 10,
+          "value": 30,
+          "command": { "server": { "id": "ops_tail_depth", "template": "tail -n ${value} /var/log/dpkg.log" } },
+          "presentation": "popover",
+          "timeoutMs": 6000,
+          "w": 4,
+          "h": 2,
+          "x": 0,
+          "y": 4
+        },
+        {
+          "id": "workspaceTree",
+          "type": "output",
+          "label": "Repository tree",
+          "command": { "server": { "id": "ops_repo_tree", "template": "ls -lah" } },
+          "mode": "manual",
+          "onDemandButtonLabel": "List root",
+          "presentation": "inline",
+          "timeoutMs": 6000,
+          "w": 4,
+          "h": 3,
+          "x": 0,
+          "y": 6
+        }
+      ]
+    }
+  ],
+  "whitelist": [
+    "uptime",
+    "who",
+    "echo",
+    "ls",
+    "df",
+    "free",
+    "uname",
+    "ps",
+    "head",
+    "tail",
+    "cat",
+    "sh"
+  ]
+}

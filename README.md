@@ -3,6 +3,20 @@
 LocalUI is a tiny PHP web interface that renders controls defined in JSON and safely executes whitelisted shell commands on your machine. It is intended for localhost use with the built-in PHP server.
 <img width="1280" height="1302" alt="image" src="https://github.com/user-attachments/assets/b333ae00-905c-4c5d-984c-37e46820c7b2" />
 
+Additional ready-to-run layouts are available in `config/`. Screenshots for each layout accompany this release in the project conversation thread.
+
+- [`ui.operations.json`](config/ui.operations.json) — control-room style dashboard for runtime operations with grouped actions, live metrics, and file tools.
+- [`ui.triage.json`](config/ui.triage.json) — incident triage workspace with stacked status blocks, log tooling, and safety toggles.
+- [`ui.workspace.json`](config/ui.workspace.json) — repository-focused cockpit with project summaries, environment checks, and repository utilities.
+
+Swap any of them into place with:
+
+```sh
+cp config/ui.operations.json config/ui.json
+```
+
+Then reload the browser to explore the layout.
+
 
 ## Requirements
 - PHP 8.1 or newer with `proc_open` enabled
