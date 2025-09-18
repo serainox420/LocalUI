@@ -10,7 +10,7 @@ try {
 }
 
 $embeddedConfig = $config ? json_encode($config, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '{}';
-$fontStack = $config['globals']['theme']['font'] ?? 'Inter, system-ui, sans-serif';
+$fontStack = $config['globals']['theme']['font'] ?? '\'JetBrainsMono Nerd Font\', \'JetBrains Mono\', \'Fira Code\', ui-monospace, \'SFMono-Regular\', Menlo, Monaco, Consolas, \'Liberation Mono\', \'Courier New\', monospace';
 $primary = $config['globals']['theme']['palette']['primary'] ?? '#111827';
 $accent = $config['globals']['theme']['palette']['accent'] ?? '#10B981';
 $surface = $config['globals']['theme']['palette']['surface'] ?? '#F8FAFC';

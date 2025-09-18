@@ -15,6 +15,11 @@
 
   const polls = new Map();
   const views = new Map();
+  const elementIndex = new Map();
+  const pendingUserActions = new Map();
+  const soundCache = new Map();
+  const fadeStateKey = Symbol('fadeState');
+  const DEFAULT_FADE_DURATION = 400;
   const overlay = createOverlayManager();
 
   const globals = config.globals || {};
@@ -28,6 +33,183 @@
   window.addEventListener('beforeunload', () => {
     polls.forEach((timer) => clearInterval(timer));
   });
+
+  function markUserAction(elementId) {
+    if (!elementId) {
+      return;
+    }
+    const current = pendingUserActions.get(elementId) || 0;
+    pendingUserActions.set(elementId, current + 1);
+  }
+
+  function consumeUserAction(elementId) {
+    if (!elementId) {
+      return false;
+    }
+    const current = pendingUserActions.get(elementId) || 0;
+    if (current <= 0) {
+      pendingUserActions.delete(elementId);
+      return false;
+    }
+    if (current === 1) {
+      pendingUserActions.delete(elementId);
+    } else {
+      pendingUserActions.set(elementId, current - 1);
+    }
+    return true;
+  }
+
+  function scheduleFadeOut(element, timeoutMs, removeFn) {
+    const duration = Number(timeoutMs);
+    if (!element || !Number.isFinite(duration) || duration <= 0) {
+      return null;
+    }
+    return setTimeout(() => {
+      fadeOutElement(element, removeFn);
+    }, duration);
+  }
+
+  function fadeOutElement(element, removeFn) {
+    if (!element) {
+      if (typeof removeFn === 'function') {
+        removeFn();
+      }
+      return;
+    }
+
+    cancelFade(element);
+
+    const remove = typeof removeFn === 'function' ? removeFn : () => element.remove();
+
+    if (!element.isConnected) {
+      remove();
+      return;
+    }
+
+    element.classList.add('ui-fadeable');
+    void element.offsetWidth;
+    element.classList.add('is-fading');
+
+    let finished = false;
+    let fallbackTimer = null;
+
+    const clearState = () => {
+      element.removeEventListener('transitionend', onTransitionEnd);
+      if (fallbackTimer !== null) {
+        clearTimeout(fallbackTimer);
+      }
+      delete element[fadeStateKey];
+    };
+
+    const finish = () => {
+      if (finished) {
+        return;
+      }
+      finished = true;
+      clearState();
+      remove();
+    };
+
+    const onTransitionEnd = (event) => {
+      if (event.target !== element || event.propertyName !== 'opacity') {
+        return;
+      }
+      finish();
+    };
+
+    element.addEventListener('transitionend', onTransitionEnd);
+
+    const style = element.ownerDocument?.defaultView?.getComputedStyle?.(element);
+    const variableDuration = Number.parseFloat(style?.getPropertyValue('--ui-fade-duration'));
+    const fallbackDuration = Number.isFinite(variableDuration) ? variableDuration : DEFAULT_FADE_DURATION;
+    fallbackTimer = setTimeout(finish, fallbackDuration + 100);
+
+    element[fadeStateKey] = {
+      cancel() {
+        if (finished) {
+          return;
+        }
+        clearState();
+        element.classList.remove('is-fading');
+      },
+    };
+  }
+
+  function cancelFade(element) {
+    if (!element) {
+      return;
+    }
+    const state = element[fadeStateKey];
+    if (state && typeof state.cancel === 'function') {
+      state.cancel();
+    }
+  }
+
+  function playElementSound(element, ...variants) {
+    if (!element) {
+      return;
+    }
+    const source = resolveSoundSource(element.sound, variants);
+    if (!source) {
+      return;
+    }
+    playSoundFile(source);
+  }
+
+  function resolveSoundSource(config, variants = []) {
+    if (!config) {
+      return null;
+    }
+    if (typeof config === 'string') {
+      const trimmed = config.trim();
+      return trimmed || null;
+    }
+    if (typeof config !== 'object') {
+      return null;
+    }
+    const queue = [];
+    if (Array.isArray(variants)) {
+      variants.forEach((key) => {
+        if (typeof key === 'string' && key && !queue.includes(key)) {
+          queue.push(key);
+        }
+      });
+    }
+    if (!queue.includes('default')) {
+      queue.push('default');
+    }
+    for (const key of queue) {
+      const value = config[key];
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed) {
+          return trimmed;
+        }
+      }
+    }
+    return null;
+  }
+
+  function playSoundFile(filename) {
+    const sanitized = String(filename || '').trim();
+    if (!sanitized || typeof Audio !== 'function') {
+      return;
+    }
+    const src = `/sound/${encodeURIComponent(sanitized)}`;
+    let base = soundCache.get(src);
+    if (!base) {
+      base = new Audio(src);
+      base.preload = 'auto';
+      soundCache.set(src, base);
+    }
+    const instance = base.cloneNode(true);
+    instance.preload = 'auto';
+    instance.src = base.src;
+    instance.currentTime = 0;
+    instance.play().catch((error) => {
+      console.warn('Unable to play sound', sanitized, error);
+    });
+  }
 
   function normalizeLayout(value) {
     return value === 'grid' ? 'grid' : 'stack';
@@ -54,6 +236,10 @@
   function renderEntity(entity, container, context) {
     if (!entity || typeof entity !== 'object') {
       return;
+    }
+
+    if (entity.id) {
+      elementIndex.set(entity.id, entity);
     }
 
     const parentLayout = context?.layout || 'grid';
@@ -264,22 +450,32 @@
       if (!wrapper) {
         wrapper = document.createElement('div');
         wrapper.className = 'result-inline flex flex-col gap-3 text-xs text-slate-300';
+        wrapper.classList.add('ui-fadeable');
       }
+      if (hideTimer) {
+        clearTimeout(hideTimer);
+        hideTimer = null;
+      }
+      cancelFade(wrapper);
+      wrapper.classList.remove('is-fading');
       if (!wrapper.isConnected) {
         section.appendChild(wrapper);
       }
     }
 
     function scheduleHide() {
-      if (timeoutMs <= 0) {
+      if (timeoutMs <= 0 || !wrapper) {
         return;
       }
-      clearTimeout(hideTimer);
-      hideTimer = setTimeout(() => {
-        if (wrapper && wrapper.isConnected) {
+      if (hideTimer) {
+        clearTimeout(hideTimer);
+      }
+      hideTimer = scheduleFadeOut(wrapper, timeoutMs, () => {
+        if (wrapper) {
           wrapper.remove();
         }
-      }, timeoutMs);
+        hideTimer = null;
+      });
     }
 
     function render(description) {
@@ -426,7 +622,7 @@
       });
       surface.classList.add('ui-notification');
       notificationHost.appendChild(surface);
-      scheduleDismiss(() => surface.remove(), timeoutMs);
+      scheduleFadeOut(surface, timeoutMs, () => surface.remove());
       return surface;
     }
 
@@ -448,7 +644,7 @@
       surface.classList.add('ui-floating', `ui-floating-${settings.variant}`);
       floatingLayer.appendChild(surface);
       requestAnimationFrame(() => positionFloating(surface, anchor, settings.variant));
-      scheduleDismiss(() => surface.remove(), timeoutMs);
+      scheduleFadeOut(surface, timeoutMs, () => surface.remove());
       return surface;
     }
 
@@ -471,6 +667,7 @@
     function createSurface(content, tone, options) {
       const surface = document.createElement('div');
       surface.className = `ui-surface ui-tone-${tone}`;
+      surface.classList.add('ui-fadeable');
       surface.tabIndex = -1;
 
       const body = document.createElement('div');
@@ -486,6 +683,7 @@
         close.innerHTML = '&times;';
         close.addEventListener('click', (event) => {
           event.stopPropagation();
+          cancelFade(surface);
           if (typeof options.onClose === 'function') {
             options.onClose();
           }
@@ -496,25 +694,28 @@
       return surface;
     }
 
-    function scheduleDismiss(action, timeoutMs) {
-      if (timeoutMs <= 0) {
-        return;
-      }
-      setTimeout(action, timeoutMs);
-    }
-
     function scheduleModalDismiss(timeoutMs) {
       clearTimeout(modalTimer);
       if (timeoutMs <= 0) {
         return;
       }
       modalTimer = setTimeout(() => {
-        closeModal();
+        const surface = modalScrim.querySelector('.ui-surface');
+        if (surface) {
+          fadeOutElement(surface, () => closeModal());
+        } else {
+          closeModal();
+        }
       }, timeoutMs);
     }
 
     function closeModal() {
       clearTimeout(modalTimer);
+      modalTimer = null;
+      const surface = modalScrim.querySelector('.ui-surface');
+      if (surface) {
+        cancelFade(surface);
+      }
       modalScrim.classList.add('hidden');
       modalScrim.innerHTML = '';
     }
@@ -571,9 +772,10 @@
     container.appendChild(button);
 
     button.addEventListener('click', async () => {
+      playElementSound(element, 'interaction');
       try {
         if (element.command?.server) {
-          await runServerCommand(element.id, element.command.server, {});
+          await runServerCommand(element.id, element.command.server, {}, { userTriggered: true });
         }
         if (element.command?.client?.script) {
           executeClientScript(element, element.command.client.script);
@@ -604,14 +806,16 @@
     container.appendChild(row);
 
     input.addEventListener('change', async () => {
-      const command = input.checked ? element.onCommand?.server : element.offCommand?.server;
-      label.textContent = input.checked ? 'On' : 'Off';
+      const nextState = input.checked;
+      const command = nextState ? element.onCommand?.server : element.offCommand?.server;
+      label.textContent = nextState ? 'On' : 'Off';
+      playElementSound(element, nextState ? 'on' : 'off', 'interaction');
       if (!command) {
         return;
       }
       input.disabled = true;
       try {
-        await runServerCommand(element.id, command, { value: input.checked });
+        await runServerCommand(element.id, command, { value: nextState }, { userTriggered: true });
       } catch (error) {
         input.checked = !input.checked;
         label.textContent = input.checked ? 'On' : 'Off';
@@ -639,14 +843,21 @@
 
     const apply = makeButton('Apply');
 
-    minus.addEventListener('click', () => adjust(-1));
-    plus.addEventListener('click', () => adjust(1));
+    minus.addEventListener('click', () => {
+      playElementSound(element, 'decrement', 'interaction');
+      adjust(-1);
+    });
+    plus.addEventListener('click', () => {
+      playElementSound(element, 'increment', 'interaction');
+      adjust(1);
+    });
     apply.addEventListener('click', async () => {
+      playElementSound(element, 'interaction');
       if (!element.command?.server) {
         return;
       }
       try {
-        await runServerCommand(element.id, element.command.server, { value: Number(input.value) });
+        await runServerCommand(element.id, element.command.server, { value: Number(input.value) }, { userTriggered: true });
       } catch (error) {
         // shown already
       }
@@ -685,6 +896,7 @@
     container.appendChild(row);
 
     button.addEventListener('click', async () => {
+      playElementSound(element, 'interaction');
       if (!element.apply?.command?.server) {
         return;
       }
@@ -695,7 +907,7 @@
         value = value === 'true' || value === '1' || value === 'on';
       }
       try {
-        await runServerCommand(element.id, element.apply.command.server, { value });
+        await runServerCommand(element.id, element.apply.command.server, { value }, { userTriggered: true });
       } catch (error) {
         // shown already
       }
@@ -709,11 +921,12 @@
       const button = makeButton(element.onDemandButtonLabel || 'Refresh');
       container.appendChild(button);
       button.addEventListener('click', async () => {
+        playElementSound(element, 'interaction');
         if (!element.command?.server) {
           return;
         }
         try {
-          await runServerCommand(element.id, element.command.server, {});
+          await runServerCommand(element.id, element.command.server, {}, { userTriggered: true });
         } catch (error) {
           // shown already
         }
@@ -736,7 +949,11 @@
     return button;
   }
 
-  async function runServerCommand(elementId, command, args) {
+  async function runServerCommand(elementId, command, args, options = {}) {
+    if (options?.userTriggered) {
+      markUserAction(elementId);
+    }
+
     if (!command?.id) {
       showError(elementId, 'Command id missing');
       throw new Error('Command id missing');
@@ -766,7 +983,13 @@
       throw new Error(message);
     }
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch (error) {
+      showError(elementId, error instanceof Error ? error.message : 'Invalid response');
+      throw error;
+    }
     applyResult(elementId, data);
     return data;
   }
@@ -794,14 +1017,21 @@
   }
 
   function applyResult(elementId, payload) {
-    if (!payload || !payload.result) {
-      return;
-    }
     const view = views.get(elementId);
     if (!view) {
+      consumeUserAction(elementId);
+      return;
+    }
+    if (!payload || !payload.result) {
+      consumeUserAction(elementId);
       return;
     }
     view.showResult(payload);
+    const hadPending = consumeUserAction(elementId);
+    if (hadPending && payload.result.ok === false) {
+      const element = elementIndex.get(elementId);
+      playElementSound(element, 'error');
+    }
   }
 
   function safeDate(value) {
@@ -815,9 +1045,14 @@
   function showError(elementId, message) {
     const view = views.get(elementId);
     if (!view) {
+      consumeUserAction(elementId);
       return;
     }
     view.showError(message);
+    if (consumeUserAction(elementId)) {
+      const element = elementIndex.get(elementId);
+      playElementSound(element, 'error');
+    }
   }
 
   function executeClientScript(element, script) {
