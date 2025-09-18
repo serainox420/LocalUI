@@ -20,7 +20,7 @@ export function initializeApp(root, config) {
 
   const globals = config.globals || {};
   const rootLayout = setupLayout(root, globals);
-  const rootContext = { layout: rootLayout, globals };
+  const rootContext = { layout: rootLayout, globals, root };
 
   (config.elements || []).forEach((element) => {
     renderer.renderEntity(element, root, rootContext);
