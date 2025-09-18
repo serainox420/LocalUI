@@ -1,0 +1,328 @@
+{
+  "globals": {
+    "theme": {
+      "palette": {
+        "primary": "#0F172A",
+        "accent": "#22D3EE",
+        "surface": "#020617",
+        "muted": "#475569"
+      },
+      "font": "'IBM Plex Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+      "margins": 20,
+      "gap": 12,
+      "layout": "grid"
+    },
+    "defaults": { "w": 4, "h": 2, "classes": "" }
+  },
+  "elements": [
+    {
+      "id": "opsNavbar",
+      "type": "navbar",
+      "label": "Operations board",
+      "side": "top",
+      "align": "start",
+      "gap": 12,
+      "defaults": { "presentation": "notification", "timeoutMs": 3200 },
+      "elements": [
+        {
+          "id": "navOpsMain",
+          "type": "button",
+          "label": "Main layout",
+          "command": {
+            "client": {
+              "loadConfig": {
+                "useDefault": true,
+                "label": "Primary interface",
+                "loadingMessage": "Loading main interface…"
+              }
+            }
+          }
+        },
+        {
+          "id": "navOpsAlt",
+          "type": "button",
+          "label": "Alternate layout",
+          "command": {
+            "client": {
+              "loadConfig": {
+                "name": "ui.alt",
+                "label": "Alternate interface",
+                "loadingMessage": "Loading alternate interface…"
+              }
+            }
+          }
+        },
+        {
+          "id": "navOpsOps",
+          "type": "button",
+          "label": "Ops board",
+          "tooltip": "Reload this dashboard",
+          "bg": "rgba(34, 211, 238, 0.18)",
+          "color": "#22D3EE",
+          "command": {
+            "client": {
+              "loadConfig": {
+                "name": "ui.ops",
+                "label": "Operations board",
+                "loadingMessage": "Opening operations board…"
+              }
+            }
+          }
+        },
+        {
+          "id": "navOpsDiagnostics",
+          "type": "button",
+          "label": "Diagnostics",
+          "command": {
+            "client": {
+              "loadConfig": {
+                "name": "ui.diagnostics",
+                "label": "Diagnostics interface",
+                "loadingMessage": "Loading diagnostics tools…"
+              }
+            }
+          }
+        },
+        {
+          "id": "navOpsMedia",
+          "type": "button",
+          "label": "Media deck",
+          "command": {
+            "client": {
+              "loadConfig": {
+                "name": "ui.media",
+                "label": "Media control deck",
+                "loadingMessage": "Loading media controls…"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "opsSnapshots",
+      "type": "group",
+      "label": "System snapshots",
+      "w": 12,
+      "h": 5,
+      "columns": 4,
+      "gap": 12,
+      "border": true,
+      "background": "rgba(15, 23, 42, 0.35)",
+      "elements": [
+        {
+          "id": "opsUptime",
+          "type": "output",
+          "label": "Uptime",
+          "command": { "server": { "id": "opsUptime", "template": "uptime" } },
+          "mode": "poll",
+          "intervalMs": 10000,
+          "presentation": "inline",
+          "timeoutMs": 0,
+          "h": 3,
+          "w": 1
+        },
+        {
+          "id": "opsLoad",
+          "type": "output",
+          "label": "Load average",
+          "command": { "server": { "id": "opsLoad", "template": "cat /proc/loadavg" } },
+          "mode": "poll",
+          "intervalMs": 8000,
+          "presentation": "tooltip",
+          "timeoutMs": 0,
+          "h": 3,
+          "w": 1
+        },
+        {
+          "id": "opsDisk",
+          "type": "output",
+          "label": "Disk usage",
+          "command": { "server": { "id": "opsDisk", "template": "df -h /" } },
+          "mode": "manual",
+          "onDemandButtonLabel": "Refresh disk",
+          "presentation": "popover",
+          "timeoutMs": 6000,
+          "h": 3,
+          "w": 1
+        },
+        {
+          "id": "opsConnections",
+          "type": "output",
+          "label": "Connections",
+          "command": { "server": { "id": "opsConnections", "template": "ss -s" } },
+          "mode": "manual",
+          "onDemandButtonLabel": "Summarize sockets",
+          "presentation": "inline",
+          "timeoutMs": 6000,
+          "h": 3,
+          "w": 1
+        }
+      ]
+    },
+    {
+      "id": "opsControls",
+      "type": "group",
+      "label": "Operations controls",
+      "w": 12,
+      "h": 4,
+      "columns": 4,
+      "gap": 12,
+      "border": true,
+      "background": "rgba(8, 47, 73, 0.35)",
+      "elements": [
+        {
+          "id": "opsDeploy",
+          "type": "button",
+          "label": "Trigger deploy",
+          "tooltip": "Queue a deployment job",
+          "sound": "click.mp3",
+          "command": { "server": { "id": "opsDeploy", "template": "printf 'Deployment request queued\\n'" } },
+          "presentation": "notification",
+          "timeoutMs": 3200,
+          "w": 1
+        },
+        {
+          "id": "opsServiceStatus",
+          "type": "button",
+          "label": "Service status",
+          "tooltip": "Check running services",
+          "command": {
+            "server": {
+              "id": "opsServiceStatus",
+              "template": "systemctl --no-pager --type=service --state=running | head -n 20"
+            }
+          },
+          "presentation": "modal",
+          "timeoutMs": 8000,
+          "w": 1
+        },
+        {
+          "id": "opsMaintenance",
+          "type": "toggle",
+          "label": "Maintenance mode",
+          "onCommand": { "server": { "id": "opsMaintenanceOn", "template": "printf 'Maintenance mode enabled\\n'" } },
+          "offCommand": { "server": { "id": "opsMaintenanceOff", "template": "printf 'Maintenance mode disabled\\n'" } },
+          "initial": false,
+          "presentation": "notification",
+          "timeoutMs": 3200,
+          "w": 1
+        },
+        {
+          "id": "opsLogLevel",
+          "type": "stepper",
+          "label": "Log level",
+          "min": 1,
+          "max": 5,
+          "step": 1,
+          "value": 3,
+          "command": { "server": { "id": "opsLogLevel", "template": "printf 'Log level set to %s\\n' ${value}" } },
+          "presentation": "tooltip",
+          "timeoutMs": 4000,
+          "w": 1
+        }
+      ]
+    },
+    {
+      "id": "opsLogs",
+      "type": "group",
+      "label": "Log review",
+      "w": 12,
+      "h": 5,
+      "columns": 2,
+      "gap": 12,
+      "border": true,
+      "background": "rgba(15, 23, 42, 0.3)",
+      "elements": [
+        {
+          "id": "opsRecentLogs",
+          "type": "output",
+          "label": "Recent log files",
+          "command": { "server": { "id": "opsRecentLogs", "template": "ls -1t /var/log | head -n 8" } },
+          "mode": "manual",
+          "onDemandButtonLabel": "List files",
+          "presentation": "inline",
+          "timeoutMs": 6000,
+          "h": 3,
+          "w": 1
+        },
+        {
+          "id": "opsErrorStream",
+          "type": "output",
+          "label": "Error stream",
+          "command": {
+            "server": {
+              "id": "opsErrorStream",
+              "template": "journalctl -p 3 -n 20 --no-pager"
+            }
+          },
+          "mode": "manual",
+          "onDemandButtonLabel": "Tail errors",
+          "presentation": "popover",
+          "timeoutMs": 8000,
+          "h": 3,
+          "w": 1
+        }
+      ]
+    },
+    {
+      "id": "opsInvestigations",
+      "type": "group",
+      "label": "Investigations",
+      "w": 12,
+      "h": 4,
+      "columns": 2,
+      "gap": 12,
+      "border": true,
+      "background": "rgba(15, 23, 42, 0.25)",
+      "elements": [
+        {
+          "id": "opsInspectService",
+          "type": "input",
+          "label": "Inspect service log",
+          "inputType": "string",
+          "apply": {
+            "label": "Read log",
+            "command": {
+              "server": {
+                "id": "opsInspectService",
+                "template": "journalctl -u ${value} -n 40 --no-pager"
+              }
+            }
+          },
+          "presentation": "modal",
+          "timeoutMs": 8000,
+          "w": 1,
+          "h": 3
+        },
+        {
+          "id": "opsTailSyslog",
+          "type": "button",
+          "label": "Tail syslog",
+          "command": {
+            "server": {
+              "id": "opsTailSyslog",
+              "template": "tail -n 40 /var/log/syslog"
+            }
+          },
+          "presentation": "inline",
+          "timeoutMs": 7000,
+          "w": 1,
+          "h": 3
+        }
+      ]
+    }
+  ],
+  "whitelist": [
+    "cat",
+    "df",
+    "head",
+    "journalctl",
+    "ls",
+    "printf",
+    "ss",
+    "systemctl",
+    "tail",
+    "uptime"
+  ]
+}
