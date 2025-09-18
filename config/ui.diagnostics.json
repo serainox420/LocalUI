@@ -28,6 +28,10 @@
           "type": "button",
           "label": "Main layout",
           "command": {
+            "server": {
+              "id": "navDiagMain",
+              "template": "echo 'Switching to main layout'"
+            },
             "client": {
               "loadConfig": {
                 "useDefault": true,
@@ -42,6 +46,10 @@
           "type": "button",
           "label": "Alternate layout",
           "command": {
+            "server": {
+              "id": "navDiagAlt",
+              "template": "echo 'Switching to alternate layout'"
+            },
             "client": {
               "loadConfig": {
                 "name": "ui.alt",
@@ -56,6 +64,10 @@
           "type": "button",
           "label": "Ops board",
           "command": {
+            "server": {
+              "id": "navDiagOps",
+              "template": "echo 'Switching to operations board'"
+            },
             "client": {
               "loadConfig": {
                 "name": "ui.ops",
@@ -73,6 +85,10 @@
           "bg": "rgba(56, 189, 248, 0.18)",
           "color": "#38BDF8",
           "command": {
+            "server": {
+              "id": "navDiagDiag",
+              "template": "echo 'Reloading diagnostics interface'"
+            },
             "client": {
               "loadConfig": {
                 "name": "ui.diagnostics",
@@ -87,6 +103,10 @@
           "type": "button",
           "label": "Media deck",
           "command": {
+            "server": {
+              "id": "navDiagMedia",
+              "template": "echo 'Switching to media deck'"
+            },
             "client": {
               "loadConfig": {
                 "name": "ui.media",

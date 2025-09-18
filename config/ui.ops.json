@@ -29,6 +29,10 @@
           "type": "button",
           "label": "Main layout",
           "command": {
+            "server": {
+              "id": "navOpsMain",
+              "template": "echo 'Switching to main layout'"
+            },
             "client": {
               "loadConfig": {
                 "useDefault": true,
@@ -43,6 +47,10 @@
           "type": "button",
           "label": "Alternate layout",
           "command": {
+            "server": {
+              "id": "navOpsAlt",
+              "template": "echo 'Switching to alternate layout'"
+            },
             "client": {
               "loadConfig": {
                 "name": "ui.alt",
@@ -60,6 +68,10 @@
           "bg": "rgba(34, 211, 238, 0.18)",
           "color": "#22D3EE",
           "command": {
+            "server": {
+              "id": "navOpsOps",
+              "template": "echo 'Reloading operations board'"
+            },
             "client": {
               "loadConfig": {
                 "name": "ui.ops",
@@ -74,6 +86,10 @@
           "type": "button",
           "label": "Diagnostics",
           "command": {
+            "server": {
+              "id": "navOpsDiagnostics",
+              "template": "echo 'Switching to diagnostics interface'"
+            },
             "client": {
               "loadConfig": {
                 "name": "ui.diagnostics",
@@ -88,6 +104,10 @@
           "type": "button",
           "label": "Media deck",
           "command": {
+            "server": {
+              "id": "navOpsMedia",
+              "template": "echo 'Switching to media deck'"
+            },
             "client": {
               "loadConfig": {
                 "name": "ui.media",
