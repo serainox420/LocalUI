@@ -1,7 +1,16 @@
 # LocalUI
 
-LocalUI is a tiny PHP web interface that renders controls defined in JSON and safely executes whitelisted shell commands on your machine. It is intended for localhost use with the built-in PHP server.
-<img width="1280" height="1302" alt="image" src="https://github.com/user-attachments/assets/b333ae00-905c-4c5d-984c-37e46820c7b2" />
+> ***LocalUI*** is a tiny **PHP/JS/HTML/TAILWIND** *Local Web Interface* \
+> **UI that renders controls defined in JSON config and interfaces with operating system via shell**
+
+<table>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/b333ae00-905c-4c5d-984c-37e46820c7b2" width="400" alt="gallery 1"></td>
+    <td><img src="https://github.com/user-attachments/assets/36d12eb4-d3cd-4a25-9d2b-68c3bb9c82ff" width="400" alt="gallery 2"></td>
+    <td><img src="https://github.com/user-attachments/assets/d2dd2b05-1922-4344-855c-5a513ea189e2" width="400" alt="gallery 3"></td>
+  </tr>
+</table>
+
 
 Additional ready-to-run layouts are available in `config/`. Screenshots for each layout accompany this release in the project conversation thread.
 
