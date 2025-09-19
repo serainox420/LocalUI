@@ -1,0 +1,235 @@
+{
+  "globals": {
+    "theme": {
+      "palette": {
+        "primary": "#1D4ED8",
+        "accent": "#10B981",
+        "surface": "#F8FAFC",
+        "muted": "#64748B",
+        "danger": "#EF4444"
+      },
+      "font": "'Inter var', 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif",
+      "margins": 32,
+      "gap": 20,
+      "layout": "grid"
+    },
+    "defaults": {
+      "w": 6,
+      "h": 2,
+      "classes": "rounded-xl bg-white/10 border border-slate-200/20 text-slate-100 shadow-xl"
+    }
+  },
+  "elements": [
+    {
+      "id": "workspaceSummary",
+      "type": "group",
+      "label": "Workspace summary",
+      "w": 12,
+      "h": 3,
+      "x": 0,
+      "y": 0,
+      "columns": 12,
+      "gap": 12,
+      "border": "1px solid rgba(15, 23, 42, 0.15)",
+      "background": "rgba(15, 23, 42, 0.35)",
+      "elements": [
+        {
+          "id": "gitStatus",
+          "type": "button",
+          "label": "Git status",
+          "sound": "click.mp3",
+          "command": { "server": { "id": "workspace_git_status", "template": "sh -c \"cd /workspace/LocalUI && git status -sb\"" } },
+          "presentation": "modal",
+          "timeoutMs": 9000,
+          "w": 4,
+          "h": 2,
+          "x": 0,
+          "y": 0
+        },
+        {
+          "id": "readReadme",
+          "type": "button",
+          "label": "Read README",
+          "sound": "click.mp3",
+          "command": { "server": { "id": "workspace_readme", "template": "cat README.md" } },
+          "presentation": "popover",
+          "timeoutMs": 7000,
+          "w": 4,
+          "h": 2,
+          "x": 4,
+          "y": 0
+        },
+        {
+          "id": "listConfig",
+          "type": "button",
+          "label": "List configs",
+          "sound": "click.mp3",
+          "command": { "server": { "id": "workspace_list_configs", "template": "ls -lah config" } },
+          "presentation": "tooltip",
+          "timeoutMs": 5000,
+          "w": 4,
+          "h": 2,
+          "x": 8,
+          "y": 0
+        },
+        {
+          "id": "debugToggle",
+          "type": "toggle",
+          "label": "Debug logging",
+          "sound": "click.mp3",
+          "onCommand": { "server": { "id": "workspace_debug_on", "template": "echo Debug logging ENABLED" } },
+          "offCommand": { "server": { "id": "workspace_debug_off", "template": "echo Debug logging DISABLED" } },
+          "initial": false,
+          "presentation": "inline",
+          "timeoutMs": 0,
+          "w": 4,
+          "h": 2,
+          "x": 0,
+          "y": 2
+        }
+      ]
+    },
+    {
+      "id": "workspaceOutputs",
+      "type": "group",
+      "label": "Workspace outputs",
+      "w": 7,
+      "h": 10,
+      "x": 0,
+      "y": 3,
+      "columns": 7,
+      "gap": 12,
+      "border": "1px solid rgba(148, 163, 184, 0.25)",
+      "background": "rgba(226, 232, 240, 0.08)",
+      "elements": [
+        {
+          "id": "repoTree",
+          "type": "output",
+          "label": "Repository tree",
+          "command": { "server": { "id": "workspace_repo_tree", "template": "ls -lah /workspace/LocalUI" } },
+          "mode": "manual",
+          "onDemandButtonLabel": "List repo",
+          "presentation": "inline",
+          "timeoutMs": 7000,
+          "w": 7,
+          "h": 3,
+          "x": 0,
+          "y": 0
+        },
+        {
+          "id": "diskFootprint",
+          "type": "output",
+          "label": "Disk footprint",
+          "command": { "server": { "id": "workspace_disk", "template": "du -sh /workspace/LocalUI" } },
+          "mode": "poll",
+          "intervalMs": 15000,
+          "presentation": "inline",
+          "timeoutMs": 0,
+          "w": 7,
+          "h": 2,
+          "x": 0,
+          "y": 3
+        },
+        {
+          "id": "phpVersion",
+          "type": "output",
+          "label": "PHP version",
+          "command": { "server": { "id": "workspace_php_version", "template": "php -v" } },
+          "mode": "manual",
+          "onDemandButtonLabel": "Check PHP",
+          "presentation": "popover",
+          "timeoutMs": 6000,
+          "w": 7,
+          "h": 2,
+          "x": 0,
+          "y": 5
+        },
+        {
+          "id": "recentCommits",
+          "type": "output",
+          "label": "Recent commits",
+          "command": { "server": { "id": "workspace_commits", "template": "sh -c \"cd /workspace/LocalUI && git log --oneline -5\"" } },
+          "mode": "manual",
+          "onDemandButtonLabel": "Show commits",
+          "presentation": "modal",
+          "timeoutMs": 9000,
+          "w": 7,
+          "h": 3,
+          "x": 0,
+          "y": 7
+        }
+      ]
+    },
+    {
+      "id": "projectInsights",
+      "type": "group",
+      "label": "Project insights",
+      "w": 5,
+      "h": 10,
+      "x": 7,
+      "y": 3,
+      "columns": 5,
+      "gap": 12,
+      "border": "1px solid rgba(37, 99, 235, 0.35)",
+      "background": "rgba(59, 130, 246, 0.15)",
+      "elements": [
+        {
+          "id": "viewFile",
+          "type": "input",
+          "label": "View file in repo",
+          "inputType": "string",
+          "apply": {
+            "label": "Open file",
+            "command": { "server": { "id": "workspace_view_file", "template": "cat /workspace/LocalUI/${value}" } }
+          },
+          "presentation": "modal",
+          "timeoutMs": 8000,
+          "w": 5,
+          "h": 4,
+          "x": 0,
+          "y": 0
+        },
+        {
+          "id": "listHead",
+          "type": "stepper",
+          "label": "List repo head",
+          "min": 5,
+          "max": 30,
+          "step": 5,
+          "value": 15,
+          "command": { "server": { "id": "workspace_list_head", "template": "sh -c \"cd /workspace/LocalUI && ls -lah | head -n ${value}\"" } },
+          "presentation": "popover",
+          "timeoutMs": 6000,
+          "w": 5,
+          "h": 2,
+          "x": 0,
+          "y": 4
+        },
+        {
+          "id": "currentUser",
+          "type": "output",
+          "label": "Current user",
+          "command": { "server": { "id": "workspace_user", "template": "whoami" } },
+          "mode": "manual",
+          "onDemandButtonLabel": "Check user",
+          "presentation": "tooltip",
+          "timeoutMs": 4000,
+          "w": 5,
+          "h": 2,
+          "x": 0,
+          "y": 6
+        }
+      ]
+    }
+  ],
+  "whitelist": [
+    "sh",
+    "git",
+    "cat",
+    "ls",
+    "echo",
+    "du",
+    "php",
+    "whoami"
+  ]
+}
