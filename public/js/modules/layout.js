@@ -21,6 +21,26 @@ function resolveSpacing(value, fallback = 0) {
   return fallback;
 }
 
+function parsePixel(value, fallback = 0) {
+  const numeric = Number.parseFloat(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+function resolveContentWidth(container, surfaceWidth, margin) {
+  if (!container) {
+    return Math.max(0, surfaceWidth - margin * 2);
+  }
+  const measuredWidth = container.clientWidth;
+  const docView = container.ownerDocument?.defaultView;
+  const style = docView ? docView.getComputedStyle(container) : null;
+  const paddingLeft = style ? parsePixel(style.paddingLeft, margin) : margin;
+  const paddingRight = style ? parsePixel(style.paddingRight, margin) : margin;
+  if (Number.isFinite(measuredWidth) && measuredWidth > 0) {
+    return Math.max(0, measuredWidth - paddingLeft - paddingRight);
+  }
+  return Math.max(0, surfaceWidth - paddingLeft - paddingRight);
+}
+
 export function setupLayout(container, globals = {}) {
   container.className = '';
   const theme = globals.theme || {};
@@ -29,8 +49,22 @@ export function setupLayout(container, globals = {}) {
   const margin = resolveSpacing(theme.margins, 24);
   const surface = normalizeSurface(globals.surface || {});
 
+  const docRoot = document.documentElement;
+  if (docRoot) {
+    docRoot.style.setProperty('--ui-gap', `${gap}px`);
+    docRoot.style.setProperty('--ui-margin', `${margin}px`);
+  }
+  if (document.body) {
+    document.body.style.setProperty('--ui-gap', `${gap}px`);
+    document.body.style.setProperty('--ui-margin', `${margin}px`);
+  }
+
+  container.style.setProperty('--ui-gap', `${gap}px`);
+  container.style.setProperty('--ui-margin', `${margin}px`);
+
   container.dataset.layout = layout;
   container.style.padding = `${margin}px`;
+  container.style.boxSizing = 'border-box';
 
   if (layout === 'stack') {
     container.classList.add('flex', 'flex-col');
@@ -48,9 +82,24 @@ export function setupLayout(container, globals = {}) {
     container.style.gap = '';
   }
 
+  const columns = Math.max(1, Number(surface.columns) || DEFAULT_SURFACE_COLUMNS);
+  let grid = surface.gridSize || DEFAULT_GRID_SCALE;
+  if (!surface.gridExplicit) {
+    const contentWidth = resolveContentWidth(container, surface.width, margin);
+    const totalGap = gap * Math.max(0, columns - 1);
+    const availableWidth = contentWidth - totalGap;
+    if (Number.isFinite(availableWidth) && availableWidth > 0) {
+      grid = availableWidth / columns;
+    }
+  }
+
+  if (Number.isFinite(grid) && grid > 0) {
+    container.style.setProperty('--freeform-grid', `${grid}px`);
+  }
+
   applyThemeStyles(theme);
 
-  return layout;
+  return { layout, gap, margin, surface: { ...surface, gridSize: grid }, grid };
 }
 
 export function applyThemeStyles(theme = {}) {
@@ -106,16 +155,29 @@ export function normalizeSurface(surface = {}) {
   return { width, height, gridSize: grid.value, gridExplicit: grid.explicit, columns };
 }
 
+function ensureSurface(surface) {
+  if (surface && typeof surface === 'object' && 'gridExplicit' in surface) {
+    return surface;
+  }
+  return normalizeSurface(surface || {});
+}
+
 export function getSurfaceGridSize(globals = {}, fallback = DEFAULT_GRID_SCALE) {
-  const surface = normalizeSurface(globals.surface || {});
+  const surface = ensureSurface(globals.surface || {});
   const gap = resolveSpacing(globals?.theme?.gap, 0);
+  const margin = resolveSpacing(globals?.theme?.margins, 0);
+  const columns = Math.max(1, surface.columns || DEFAULT_SURFACE_COLUMNS);
   if (!surface.gridExplicit) {
-    const totalGap = gap * Math.max(0, (surface.columns || DEFAULT_SURFACE_COLUMNS) - 1);
-    const availableWidth = surface.width - totalGap;
-    const derived = availableWidth / Math.max(1, surface.columns || DEFAULT_SURFACE_COLUMNS);
+    const contentWidth = Math.max(0, surface.width - margin * 2);
+    const totalGap = gap * Math.max(0, columns - 1);
+    const availableWidth = contentWidth - totalGap;
+    const derived = availableWidth / columns;
     if (Number.isFinite(derived) && derived > 0) {
       return derived;
     }
   }
-  return surface.gridSize || fallback;
+  if (Number.isFinite(surface.gridSize) && surface.gridSize > 0) {
+    return surface.gridSize;
+  }
+  return fallback;
 }

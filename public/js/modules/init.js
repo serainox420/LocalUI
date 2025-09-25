@@ -23,9 +23,25 @@ export function initializeApp(root, config) {
     ...globals,
     surface: normalizeSurface(globals.surface || {}),
   };
-  const rootLayout = setupLayout(root, normalizedGlobals);
-  const gridSize = getSurfaceGridSize(normalizedGlobals);
-  const rootContext = { layout: rootLayout, globals: normalizedGlobals, grid: gridSize };
+  const layoutInfo = setupLayout(root, normalizedGlobals);
+  const rootLayout = layoutInfo.layout;
+  const gridSizeCandidate = Number.isFinite(layoutInfo.grid) ? layoutInfo.grid : null;
+  const gridSize = Number.isFinite(gridSizeCandidate) && gridSizeCandidate > 0
+    ? gridSizeCandidate
+    : getSurfaceGridSize(normalizedGlobals);
+  if (normalizedGlobals.surface) {
+    normalizedGlobals.surface.gridSize = gridSize;
+  }
+  const themeGap = Number(normalizedGlobals?.theme?.gap);
+  const fallbackGap = Number.isFinite(themeGap) && themeGap >= 0 ? themeGap : 16;
+  const gapValue = Number.isFinite(layoutInfo.gap) ? layoutInfo.gap : fallbackGap;
+  const rootContext = {
+    layout: rootLayout,
+    globals: normalizedGlobals,
+    grid: gridSize,
+    gap: gapValue,
+    freeformGap: gapValue,
+  };
 
   (config.elements || []).forEach((element) => {
     renderer.renderEntity(element, root, rootContext);
