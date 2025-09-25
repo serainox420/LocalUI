@@ -1,5 +1,24 @@
 import { DEFAULT_GRID_SCALE, normalizeLayout } from './layout.js';
 
+function resolveGroupGap(group, context) {
+  const candidate = Number(group?.gap);
+  if (Number.isFinite(candidate) && candidate >= 0) {
+    return candidate;
+  }
+  const themeGap = Number(context?.globals?.theme?.gap);
+  if (Number.isFinite(themeGap) && themeGap >= 0) {
+    return themeGap;
+  }
+  return 16;
+}
+
+function formatFreeformMeasurement(basePx, multiplier) {
+  if (!multiplier) {
+    return `${basePx}px`;
+  }
+  return `calc(${basePx}px + ${multiplier} * var(--freeform-gap, 0px))`;
+}
+
 export function createRenderer({ state, createResultView, playElementSound, server }) {
   const { polls, views, elementIndex } = state;
   const { runServerCommand, hydrate, executeClientScript } = server;
@@ -75,17 +94,16 @@ export function createRenderer({ state, createResultView, playElementSound, serv
     const layout = normalizeLayout(group.layout);
     body.dataset.layout = layout;
 
+    const gap = resolveGroupGap(group, context);
+
     if (layout === 'stack') {
       body.classList.add('flex', 'flex-col');
-      const gapSource = group.gap ?? context?.globals?.theme?.gap ?? 8;
-      const gapValue = Number(gapSource);
-      if (Number.isFinite(gapValue)) {
-        body.style.gap = `${gapValue}px`;
-      }
+      body.style.gap = `${gap}px`;
     } else {
       body.classList.add('group-freeform-body');
       body.style.position = 'relative';
       body.style.gap = '';
+      body.style.setProperty('--freeform-gap', `${gap}px`);
     }
 
     section.appendChild(body);
@@ -122,10 +140,10 @@ export function createRenderer({ state, createResultView, playElementSound, serv
     const topUnits = Number.isFinite(yUnits) ? yUnits : 0;
 
     node.style.position = 'absolute';
-    node.style.left = `${leftUnits * grid}px`;
-    node.style.top = `${topUnits * grid}px`;
-    node.style.width = `${widthUnits * grid}px`;
-    node.style.height = `${heightUnits * grid}px`;
+    node.style.left = formatFreeformMeasurement(leftUnits * grid, leftUnits);
+    node.style.top = formatFreeformMeasurement(topUnits * grid, topUnits);
+    node.style.width = formatFreeformMeasurement(widthUnits * grid, Math.max(0, widthUnits - 1));
+    node.style.height = formatFreeformMeasurement(heightUnits * grid, Math.max(0, heightUnits - 1));
   }
 
   function activateElement(element) {

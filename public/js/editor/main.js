@@ -3,6 +3,7 @@ import {
   DEFAULT_GRID_SCALE,
   DEFAULT_SURFACE_HEIGHT,
   DEFAULT_SURFACE_WIDTH,
+  getSurfaceGridSize,
   normalizeSurface,
   setupLayout,
 } from '../modules/layout.js';
@@ -13,6 +14,13 @@ import { createRenderer } from '../modules/renderers.js';
 const MIN_GRID_SCALE = 8;
 const MAX_GRID_SCALE = 160;
 const DRAG_START_THRESHOLD = 4;
+
+function snapToGrid(value, scale) {
+  if (!Number.isFinite(scale) || scale <= 0) {
+    return value;
+  }
+  return Math.round(value / scale) * scale;
+}
 
 const OBJECT_LIBRARY = [
   {
@@ -148,10 +156,13 @@ function cloneConfig(value) {
 
 function getSurfaceSettings(globals = {}) {
   const normalized = normalizeSurface(globals?.surface || {});
+  const inferredGrid = getSurfaceGridSize({ theme: globals?.theme, surface: globals?.surface }, DEFAULT_GRID_SCALE);
+  const gridCandidate = Number(inferredGrid || normalized.gridSize || DEFAULT_GRID_SCALE);
+  const gridValue = Number.isFinite(gridCandidate) ? gridCandidate : DEFAULT_GRID_SCALE;
   return {
     width: Math.max(1, Math.round(normalized.width || DEFAULT_SURFACE_WIDTH)),
     height: Math.max(1, Math.round(normalized.height || DEFAULT_SURFACE_HEIGHT)),
-    gridSize: clamp(Math.round(normalized.gridSize || DEFAULT_GRID_SCALE), MIN_GRID_SCALE, MAX_GRID_SCALE),
+    gridSize: clamp(gridValue, MIN_GRID_SCALE, MAX_GRID_SCALE),
   };
 }
 
@@ -1130,10 +1141,12 @@ function startMoveInteraction(state, event, id, previewEvent = null) {
     }
     const dx = evt.clientX - interaction.startX;
     const dy = evt.clientY - interaction.startY;
-    interaction.deltaX = dx;
-    interaction.deltaY = dy;
+    const snappedDx = snapToGrid(dx, state.grid.scale);
+    const snappedDy = snapToGrid(dy, state.grid.scale);
+    interaction.deltaX = snappedDx;
+    interaction.deltaY = snappedDy;
     interaction.ghosts.forEach((ghost) => {
-      ghost.node.style.transform = `translate(${dx}px, ${dy}px)`;
+      ghost.node.style.transform = `translate(${snappedDx}px, ${snappedDy}px)`;
     });
   };
 
@@ -1203,12 +1216,14 @@ function startResizeInteraction(state, event, id, direction) {
     }
     const dx = evt.clientX - interaction.startX;
     const dy = evt.clientY - interaction.startY;
-    interaction.deltaX = dx;
-    interaction.deltaY = dy;
+    const snappedDx = snapToGrid(dx, state.grid.scale);
+    const snappedDy = snapToGrid(dy, state.grid.scale);
+    interaction.deltaX = snappedDx;
+    interaction.deltaY = snappedDy;
     interaction.ghosts.forEach((ghost) => {
       const { rect } = ghost;
       const frame = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
-      const updated = adjustGhostFrame(frame, dx, dy, direction);
+      const updated = adjustGhostFrame(frame, snappedDx, snappedDy, direction);
       ghost.node.style.left = `${updated.left}px`;
       ghost.node.style.top = `${updated.top}px`;
       ghost.node.style.width = `${Math.max(24, updated.width)}px`;
