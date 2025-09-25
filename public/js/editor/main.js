@@ -7,6 +7,7 @@ import { createRenderer } from '../modules/renderers.js';
 const DEFAULT_GRID_SCALE = 48;
 const MIN_GRID_SCALE = 8;
 const MAX_GRID_SCALE = 160;
+const DRAG_START_THRESHOLD = 4;
 
 const OBJECT_LIBRARY = [
   {
@@ -557,9 +558,39 @@ function decorateNode(state, node) {
     if (event.target.closest('.editor-handle')) {
       return;
     }
-    if (event.detail >= 2) {
-      startMoveInteraction(state, event, id);
+
+    const pointerId = event.pointerId;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    let dragInitiated = false;
+
+    function cancelDetection() {
+      window.removeEventListener('pointermove', detectDrag);
+      window.removeEventListener('pointerup', handlePointerUp);
     }
+
+    function detectDrag(moveEvent) {
+      if (dragInitiated || moveEvent.pointerId !== pointerId) {
+        return;
+      }
+      const dx = Math.abs(moveEvent.clientX - startX);
+      const dy = Math.abs(moveEvent.clientY - startY);
+      if (dx >= DRAG_START_THRESHOLD || dy >= DRAG_START_THRESHOLD) {
+        dragInitiated = true;
+        cancelDetection();
+        startMoveInteraction(state, event, id, moveEvent);
+      }
+    }
+
+    function handlePointerUp(upEvent) {
+      if (upEvent.pointerId !== pointerId) {
+        return;
+      }
+      cancelDetection();
+    }
+
+    window.addEventListener('pointermove', detectDrag);
+    window.addEventListener('pointerup', handlePointerUp);
   });
   addResizeHandles(state, node, id);
   if (state.locks.has(id)) {
@@ -998,7 +1029,7 @@ function openGroupsPanel(state) {
   hideModal = showModal(state, 'Groups', body);
 }
 
-function startMoveInteraction(state, event, id) {
+function startMoveInteraction(state, event, id, previewEvent = null) {
   if (!state.selection.has(id)) {
     selectEntity(state, id, false);
   }
@@ -1060,6 +1091,10 @@ function startMoveInteraction(state, event, id) {
   window.addEventListener('pointermove', handleMove);
   window.addEventListener('pointerup', handleUp, { once: true });
   event.currentTarget?.setPointerCapture?.(interaction.pointerId);
+
+  if (previewEvent && previewEvent.pointerId === interaction.pointerId) {
+    handleMove(previewEvent);
+  }
 }
 
 function startResizeInteraction(state, event, id, direction) {
