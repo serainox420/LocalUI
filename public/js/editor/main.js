@@ -610,7 +610,6 @@ function render(state) {
 
   const globals = state.config.globals || {};
   const surfaceSettings = getSurfaceSettings(globals);
-  state.grid.scale = surfaceSettings.gridSize;
   applySurfaceDimensions(state, surfaceSettings);
 
   const normalizedGlobals = {
@@ -634,13 +633,21 @@ function render(state) {
     uiHost.style.height = '100%';
   }
 
+  const resolvedGrid = Number.isFinite(layoutInfo.grid) && layoutInfo.grid > 0
+    ? layoutInfo.grid
+    : surfaceSettings.gridSize;
+  state.grid.scale = resolvedGrid;
+  if (normalizedGlobals.surface) {
+    normalizedGlobals.surface.gridSize = resolvedGrid;
+  }
+
   const themeGap = Number(normalizedGlobals?.theme?.gap);
   const fallbackGap = Number.isFinite(themeGap) && themeGap >= 0 ? themeGap : 16;
   const gapValue = Number.isFinite(layoutInfo.gap) ? layoutInfo.gap : fallbackGap;
   const context = {
     layout,
     globals: normalizedGlobals,
-    grid: surfaceSettings.gridSize,
+    grid: resolvedGrid,
     gap: gapValue,
     freeformGap: gapValue,
   };

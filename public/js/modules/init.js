@@ -25,7 +25,13 @@ export function initializeApp(root, config) {
   };
   const layoutInfo = setupLayout(root, normalizedGlobals);
   const rootLayout = layoutInfo.layout;
-  const gridSize = getSurfaceGridSize(normalizedGlobals);
+  const gridSizeCandidate = Number.isFinite(layoutInfo.grid) ? layoutInfo.grid : null;
+  const gridSize = Number.isFinite(gridSizeCandidate) && gridSizeCandidate > 0
+    ? gridSizeCandidate
+    : getSurfaceGridSize(normalizedGlobals);
+  if (normalizedGlobals.surface) {
+    normalizedGlobals.surface.gridSize = gridSize;
+  }
   const themeGap = Number(normalizedGlobals?.theme?.gap);
   const fallbackGap = Number.isFinite(themeGap) && themeGap >= 0 ? themeGap : 16;
   const gapValue = Number.isFinite(layoutInfo.gap) ? layoutInfo.gap : fallbackGap;
