@@ -14,6 +14,13 @@ const MIN_GRID_SCALE = 8;
 const MAX_GRID_SCALE = 160;
 const DRAG_START_THRESHOLD = 4;
 
+function snapToGrid(value, scale) {
+  if (!Number.isFinite(scale) || scale <= 0) {
+    return value;
+  }
+  return Math.round(value / scale) * scale;
+}
+
 const OBJECT_LIBRARY = [
   {
     type: 'button',
@@ -1130,10 +1137,12 @@ function startMoveInteraction(state, event, id, previewEvent = null) {
     }
     const dx = evt.clientX - interaction.startX;
     const dy = evt.clientY - interaction.startY;
-    interaction.deltaX = dx;
-    interaction.deltaY = dy;
+    const snappedDx = snapToGrid(dx, state.grid.scale);
+    const snappedDy = snapToGrid(dy, state.grid.scale);
+    interaction.deltaX = snappedDx;
+    interaction.deltaY = snappedDy;
     interaction.ghosts.forEach((ghost) => {
-      ghost.node.style.transform = `translate(${dx}px, ${dy}px)`;
+      ghost.node.style.transform = `translate(${snappedDx}px, ${snappedDy}px)`;
     });
   };
 
@@ -1203,12 +1212,14 @@ function startResizeInteraction(state, event, id, direction) {
     }
     const dx = evt.clientX - interaction.startX;
     const dy = evt.clientY - interaction.startY;
-    interaction.deltaX = dx;
-    interaction.deltaY = dy;
+    const snappedDx = snapToGrid(dx, state.grid.scale);
+    const snappedDy = snapToGrid(dy, state.grid.scale);
+    interaction.deltaX = snappedDx;
+    interaction.deltaY = snappedDy;
     interaction.ghosts.forEach((ghost) => {
       const { rect } = ghost;
       const frame = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
-      const updated = adjustGhostFrame(frame, dx, dy, direction);
+      const updated = adjustGhostFrame(frame, snappedDx, snappedDy, direction);
       ghost.node.style.left = `${updated.left}px`;
       ghost.node.style.top = `${updated.top}px`;
       ghost.node.style.width = `${Math.max(24, updated.width)}px`;

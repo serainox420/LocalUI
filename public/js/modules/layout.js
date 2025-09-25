@@ -1,6 +1,7 @@
-export const DEFAULT_GRID_SCALE = 48;
 export const DEFAULT_SURFACE_WIDTH = 1200;
 export const DEFAULT_SURFACE_HEIGHT = 720;
+export const DEFAULT_SURFACE_COLUMNS = 12;
+export const DEFAULT_GRID_SCALE = Math.round(DEFAULT_SURFACE_WIDTH / DEFAULT_SURFACE_COLUMNS);
 
 export function normalizeLayout(value) {
   if (value === 'stack') {
@@ -73,15 +74,25 @@ function applyRootColor(root, variable, value) {
   }
 }
 
+function resolveDimension(value, fallback) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : fallback;
+}
+
+function resolveGridSize(gridSize, widthFallback) {
+  const numeric = Number(gridSize);
+  if (Number.isFinite(numeric) && numeric > 0) {
+    return numeric;
+  }
+  const derived = Math.round(widthFallback / DEFAULT_SURFACE_COLUMNS);
+  return Number.isFinite(derived) && derived > 0 ? derived : DEFAULT_GRID_SCALE;
+}
+
 export function normalizeSurface(surface = {}) {
-  const width = Number(surface.width);
-  const height = Number(surface.height);
-  const gridSize = Number(surface.gridSize);
-  return {
-    width: Number.isFinite(width) && width > 0 ? width : DEFAULT_SURFACE_WIDTH,
-    height: Number.isFinite(height) && height > 0 ? height : DEFAULT_SURFACE_HEIGHT,
-    gridSize: Number.isFinite(gridSize) && gridSize > 0 ? gridSize : DEFAULT_GRID_SCALE,
-  };
+  const width = resolveDimension(surface.width, DEFAULT_SURFACE_WIDTH);
+  const height = resolveDimension(surface.height, DEFAULT_SURFACE_HEIGHT);
+  const gridSize = resolveGridSize(surface.gridSize, width);
+  return { width, height, gridSize };
 }
 
 export function getSurfaceGridSize(globals = {}, fallback = DEFAULT_GRID_SCALE) {

@@ -22,7 +22,7 @@ class Defaults
                 'surface' => [
                     'width' => 1200,
                     'height' => 720,
-                    'gridSize' => 48,
+                    'gridSize' => 100,
                 ],
                 'defaults' => [
                     'w' => 12,
