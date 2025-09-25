@@ -3,6 +3,7 @@ import {
   DEFAULT_GRID_SCALE,
   DEFAULT_SURFACE_HEIGHT,
   DEFAULT_SURFACE_WIDTH,
+  getSurfaceGridSize,
   normalizeSurface,
   setupLayout,
 } from '../modules/layout.js';
@@ -155,10 +156,13 @@ function cloneConfig(value) {
 
 function getSurfaceSettings(globals = {}) {
   const normalized = normalizeSurface(globals?.surface || {});
+  const inferredGrid = getSurfaceGridSize({ theme: globals?.theme, surface: globals?.surface }, DEFAULT_GRID_SCALE);
+  const gridCandidate = Number(inferredGrid || normalized.gridSize || DEFAULT_GRID_SCALE);
+  const gridValue = Number.isFinite(gridCandidate) ? gridCandidate : DEFAULT_GRID_SCALE;
   return {
     width: Math.max(1, Math.round(normalized.width || DEFAULT_SURFACE_WIDTH)),
     height: Math.max(1, Math.round(normalized.height || DEFAULT_SURFACE_HEIGHT)),
-    gridSize: clamp(Math.round(normalized.gridSize || DEFAULT_GRID_SCALE), MIN_GRID_SCALE, MAX_GRID_SCALE),
+    gridSize: clamp(gridValue, MIN_GRID_SCALE, MAX_GRID_SCALE),
   };
 }
 

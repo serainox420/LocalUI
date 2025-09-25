@@ -15,14 +15,14 @@ class Defaults
                         'danger' => '#F87171',
                     ],
                     'font' => '\'JetBrainsMono Nerd Font\', \'JetBrains Mono\', \'Fira Code\', ui-monospace, \'SFMono-Regular\', Menlo, Monaco, Consolas, \'Liberation Mono\', \'Courier New\', monospace',
-                    'margins' => 12,
-                    'gap' => 8,
+                    'margins' => 24,
+                    'gap' => 16,
                     'layout' => 'grid',
                 ],
                 'surface' => [
                     'width' => 1200,
                     'height' => 720,
-                    'gridSize' => 100,
+                    'gridSize' => null,
                 ],
                 'defaults' => [
                     'w' => 12,
