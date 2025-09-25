@@ -1,9 +1,61 @@
 import { DEFAULT_GRID_SCALE, normalizeLayout } from './layout.js';
 
+const GROUP_PADDING_SCALE = 1.35;
+const GROUP_BODY_PADDING_SCALE = 1;
+
+function getContextGap(context) {
+  const gapCandidate = Number(context?.freeformGap ?? context?.gap);
+  if (Number.isFinite(gapCandidate) && gapCandidate >= 0) {
+    return gapCandidate;
+  }
+  const themeGap = Number(context?.globals?.theme?.gap);
+  return Number.isFinite(themeGap) && themeGap >= 0 ? themeGap : 16;
+}
+
+function deriveGroupGrid(group, context, gap) {
+  const parentGrid = Number(context?.grid) || DEFAULT_GRID_SCALE;
+  const parentGap = getContextGap(context);
+  const defaults = context?.globals?.defaults || {};
+  const widthUnits = Math.max(1, Number(group?.w ?? defaults.w ?? 1));
+  const heightUnits = Math.max(1, Number(group?.h ?? defaults.h ?? 1));
+  const columns = Math.max(1, Number(group?.columns) || Math.round(widthUnits));
+
+  const outerWidth = widthUnits * parentGrid + Math.max(0, widthUnits - 1) * parentGap;
+  const outerHeight = heightUnits * parentGrid + Math.max(0, heightUnits - 1) * parentGap;
+
+  const groupPadding = gap * GROUP_PADDING_SCALE;
+  const bodyPadding = gap * GROUP_BODY_PADDING_SCALE;
+
+  const innerWidth = Math.max(0, outerWidth - 2 * (groupPadding + bodyPadding));
+  const innerHeight = Math.max(0, outerHeight - 2 * (groupPadding + bodyPadding));
+
+  const safeDivide = (size, units) => {
+    if (!Number.isFinite(size) || size <= 0 || !Number.isFinite(units) || units <= 0) {
+      return parentGrid;
+    }
+    const occupiedGap = gap * Math.max(0, units - 1);
+    const available = size - occupiedGap;
+    if (!Number.isFinite(available) || available <= 0) {
+      return Math.min(parentGrid, Math.max(gap, size / units));
+    }
+    return available / units;
+  };
+
+  const horizontalGrid = safeDivide(innerWidth, columns);
+  const verticalGrid = safeDivide(innerHeight, Math.max(1, heightUnits));
+  const resolvedGrid = Math.max(8, Math.min(horizontalGrid, verticalGrid));
+
+  return Number.isFinite(resolvedGrid) && resolvedGrid > 0 ? resolvedGrid : parentGrid;
+}
+
 function resolveGroupGap(group, context) {
   const candidate = Number(group?.gap);
   if (Number.isFinite(candidate) && candidate >= 0) {
     return candidate;
+  }
+  const inherited = Number(context?.gap);
+  if (Number.isFinite(inherited) && inherited >= 0) {
+    return inherited;
   }
   const themeGap = Number(context?.globals?.theme?.gap);
   if (Number.isFinite(themeGap) && themeGap >= 0) {
@@ -38,7 +90,7 @@ export function createRenderer({ state, createResultView, playElementSound, serv
       const group = buildGroup(entity, context);
       applyPlacement(group.node, entity, context);
       container.appendChild(group.node);
-      const nextContext = { layout: group.layout, globals: context?.globals, grid: context?.grid };
+      const nextContext = group.context;
       (entity.elements || []).forEach((child) => {
         renderEntity(child, group.body, nextContext);
       });
@@ -58,6 +110,7 @@ export function createRenderer({ state, createResultView, playElementSound, serv
     if (group.classes) {
       section.className += ` ${group.classes}`;
     }
+    section.style.boxSizing = 'border-box';
 
     let pane = false;
     if (typeof group.border === 'string' && group.border.trim() !== '') {
@@ -97,18 +150,36 @@ export function createRenderer({ state, createResultView, playElementSound, serv
     const gap = resolveGroupGap(group, context);
     section.style.setProperty('--ui-gap', `${gap}px`);
     body.style.setProperty('--ui-gap', `${gap}px`);
+    body.style.boxSizing = 'border-box';
 
     if (layout === 'stack') {
       body.style.gap = `${gap}px`;
+      body.style.padding = '0';
     } else {
       body.classList.add('group-freeform-body');
       body.style.position = 'relative';
       body.style.gap = '';
       body.style.setProperty('--freeform-gap', `${gap}px`);
+      section.style.setProperty('--freeform-gap', `${gap}px`);
+      body.style.padding = `${gap}px`;
     }
 
     section.appendChild(body);
-    return { node: section, body, layout };
+    const parentGrid = Number(context?.grid);
+    const childContext = {
+      layout,
+      globals: context?.globals,
+      gap,
+      freeformGap: layout === 'freeform' ? gap : context?.freeformGap ?? gap,
+      grid: Number.isFinite(parentGrid) && parentGrid > 0 ? parentGrid : DEFAULT_GRID_SCALE,
+    };
+
+    if (layout === 'freeform') {
+      const derivedGrid = deriveGroupGrid(group, context, gap);
+      childContext.grid = derivedGrid;
+    }
+
+    return { node: section, body, layout, context: childContext };
   }
 
   function applyPlacement(node, item, context) {

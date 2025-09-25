@@ -1,6 +1,7 @@
 import { createAppState } from '../modules/state.js';
 import {
   DEFAULT_GRID_SCALE,
+  DEFAULT_SURFACE_COLUMNS,
   DEFAULT_SURFACE_HEIGHT,
   DEFAULT_SURFACE_WIDTH,
   getSurfaceGridSize,
@@ -20,6 +21,107 @@ function snapToGrid(value, scale) {
     return value;
   }
   return Math.round(value / scale) * scale;
+}
+
+function parsePixelValue(value) {
+  const numeric = Number.parseFloat(value);
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function getEntityNode(state, id) {
+  if (!state?.dom?.uiHost || !id) {
+    return null;
+  }
+  const selectorId = cssEscape(id);
+  return (
+    state.dom.uiHost.querySelector(`[data-element-id="${selectorId}"]`)
+    || state.dom.uiHost.querySelector(`[data-group-id="${selectorId}"]`)
+  );
+}
+
+function findFreeformContainer(node, root) {
+  if (!node) {
+    return null;
+  }
+  let current = node.parentElement;
+  while (current && current !== root) {
+    if (current.dataset?.layout === 'freeform') {
+      return current;
+    }
+    current = current.parentElement;
+  }
+  if (current && current.dataset?.layout === 'freeform') {
+    return current;
+  }
+  return null;
+}
+
+function getContainerColumns(state, container) {
+  if (!container) {
+    return null;
+  }
+  if (container === state.dom.uiHost) {
+    const surfaceColumns = Number(state.config?.globals?.surface?.columns);
+    if (Number.isFinite(surfaceColumns) && surfaceColumns > 0) {
+      return surfaceColumns;
+    }
+    return DEFAULT_SURFACE_COLUMNS;
+  }
+  const groupSection = container.closest('[data-group-id]');
+  if (!groupSection) {
+    return null;
+  }
+  const meta = state.registry.get(groupSection.dataset.groupId);
+  if (!meta) {
+    return null;
+  }
+  const explicit = Number(meta.entity?.columns);
+  if (Number.isFinite(explicit) && explicit > 0) {
+    return explicit;
+  }
+  const widthUnits = Number(meta.entity?.w);
+  if (Number.isFinite(widthUnits) && widthUnits > 0) {
+    return Math.round(widthUnits);
+  }
+  const defaultUnits = Number(state.config?.globals?.defaults?.w);
+  if (Number.isFinite(defaultUnits) && defaultUnits > 0) {
+    return Math.round(defaultUnits);
+  }
+  return DEFAULT_SURFACE_COLUMNS;
+}
+
+function getEntityGridScale(state, id) {
+  const node = getEntityNode(state, id);
+  if (!node) {
+    return state.grid.scale;
+  }
+  const container = findFreeformContainer(node, state.dom.uiHost);
+  if (!container) {
+    return state.grid.scale;
+  }
+  const style = window.getComputedStyle(container);
+  const gapValue = parsePixelValue(style.getPropertyValue('--freeform-gap'))
+    || parsePixelValue(style.getPropertyValue('--ui-gap'))
+    || state.grid.scale;
+  const paddingLeft = parsePixelValue(style.paddingLeft);
+  const paddingRight = parsePixelValue(style.paddingRight);
+  const availableWidth = container.clientWidth - paddingLeft - paddingRight;
+  if (!Number.isFinite(availableWidth) || availableWidth <= 0) {
+    return state.grid.scale;
+  }
+  const columns = getContainerColumns(state, container) || DEFAULT_SURFACE_COLUMNS;
+  const effectiveWidth = availableWidth - gapValue * Math.max(0, columns - 1);
+  if (!Number.isFinite(effectiveWidth) || effectiveWidth <= 0) {
+    return state.grid.scale;
+  }
+  return Math.max(8, effectiveWidth / columns);
+}
+
+function valuesClose(a, b, tolerance = 0.5) {
+  if (!Number.isFinite(a) || !Number.isFinite(b)) {
+    return false;
+  }
+  return Math.abs(a - b) <= tolerance;
 }
 
 const OBJECT_LIBRARY = [
@@ -521,7 +623,8 @@ function render(state) {
     },
   };
 
-  const layout = setupLayout(uiHost, normalizedGlobals);
+  const layoutInfo = setupLayout(uiHost, normalizedGlobals);
+  const layout = layoutInfo.layout;
   uiHost.dataset.layout = layout;
   if (layout === 'stack') {
     uiHost.style.width = '';
@@ -531,7 +634,16 @@ function render(state) {
     uiHost.style.height = '100%';
   }
 
-  const context = { layout, globals: normalizedGlobals, grid: surfaceSettings.gridSize };
+  const themeGap = Number(normalizedGlobals?.theme?.gap);
+  const fallbackGap = Number.isFinite(themeGap) && themeGap >= 0 ? themeGap : 16;
+  const gapValue = Number.isFinite(layoutInfo.gap) ? layoutInfo.gap : fallbackGap;
+  const context = {
+    layout,
+    globals: normalizedGlobals,
+    grid: surfaceSettings.gridSize,
+    gap: gapValue,
+    freeformGap: gapValue,
+  };
   (state.config.elements || []).forEach((element) => {
     renderer.renderEntity(element, uiHost, context);
   });
@@ -1108,6 +1220,13 @@ function startMoveInteraction(state, event, id, previewEvent = null) {
     state.overlay?.showNotification('Selection is locked', { tone: 'info', timeoutMs: 1500 });
     return;
   }
+  const gridMap = new Map();
+  movable.forEach((item) => {
+    gridMap.set(item, getEntityGridScale(state, item));
+  });
+  const baseGrid = gridMap.get(id) || state.grid.scale;
+  const uniformGrid = movable.every((item) => valuesClose(gridMap.get(item) ?? baseGrid, baseGrid));
+  const activeGrid = uniformGrid ? baseGrid : state.grid.scale;
   clearHoverState(state);
   event.preventDefault();
   const { layer, ghosts } = createGhostLayer(state, movable);
@@ -1132,6 +1251,8 @@ function startMoveInteraction(state, event, id, previewEvent = null) {
     layer,
     pointerId: event.pointerId,
     initialPositions,
+    gridScale: activeGrid,
+    gridMap,
   };
   state.interaction = interaction;
 
@@ -1141,8 +1262,8 @@ function startMoveInteraction(state, event, id, previewEvent = null) {
     }
     const dx = evt.clientX - interaction.startX;
     const dy = evt.clientY - interaction.startY;
-    const snappedDx = snapToGrid(dx, state.grid.scale);
-    const snappedDy = snapToGrid(dy, state.grid.scale);
+    const snappedDx = snapToGrid(dx, interaction.gridScale);
+    const snappedDy = snapToGrid(dy, interaction.gridScale);
     interaction.deltaX = snappedDx;
     interaction.deltaY = snappedDy;
     interaction.ghosts.forEach((ghost) => {
@@ -1179,6 +1300,13 @@ function startResizeInteraction(state, event, id, direction) {
     state.overlay?.showNotification('Selection is locked', { tone: 'info', timeoutMs: 1500 });
     return;
   }
+  const gridMap = new Map();
+  resizable.forEach((item) => {
+    gridMap.set(item, getEntityGridScale(state, item));
+  });
+  const baseGrid = gridMap.get(id) || state.grid.scale;
+  const uniformGrid = resizable.every((item) => valuesClose(gridMap.get(item) ?? baseGrid, baseGrid));
+  const activeGrid = uniformGrid ? baseGrid : state.grid.scale;
   clearHoverState(state);
   event.preventDefault();
   const { layer, ghosts } = createGhostLayer(state, resizable);
@@ -1207,6 +1335,8 @@ function startResizeInteraction(state, event, id, direction) {
     pointerId: event.pointerId,
     initialSizes,
     direction,
+    gridScale: activeGrid,
+    gridMap,
   };
   state.interaction = interaction;
 
@@ -1216,8 +1346,8 @@ function startResizeInteraction(state, event, id, direction) {
     }
     const dx = evt.clientX - interaction.startX;
     const dy = evt.clientY - interaction.startY;
-    const snappedDx = snapToGrid(dx, state.grid.scale);
-    const snappedDy = snapToGrid(dy, state.grid.scale);
+    const snappedDx = snapToGrid(dx, interaction.gridScale);
+    const snappedDy = snapToGrid(dy, interaction.gridScale);
     interaction.deltaX = snappedDx;
     interaction.deltaY = snappedDy;
     interaction.ghosts.forEach((ghost) => {
@@ -1313,9 +1443,14 @@ function endInteraction(state, interaction) {
   interaction.layer.remove();
   clearHoverState(state);
   if (interaction.type === 'move') {
-    const deltaXUnits = Math.round(interaction.deltaX / state.grid.scale);
-    const deltaYUnits = Math.round(interaction.deltaY / state.grid.scale);
-    if (deltaXUnits === 0 && deltaYUnits === 0) {
+    const hasMovement = interaction.ids.some((id) => {
+      const grid = interaction.gridMap?.get(id) || interaction.gridScale || state.grid.scale;
+      const scale = Number.isFinite(grid) && grid > 0 ? grid : state.grid.scale;
+      const unitsX = Math.round(interaction.deltaX / scale);
+      const unitsY = Math.round(interaction.deltaY / scale);
+      return unitsX !== 0 || unitsY !== 0;
+    });
+    if (!hasMovement) {
       state.interaction = null;
       return;
     }
@@ -1326,14 +1461,23 @@ function endInteraction(state, interaction) {
         if (!meta) {
           return;
         }
+        const grid = interaction.gridMap?.get(id) || interaction.gridScale || state.grid.scale;
+        const scale = Number.isFinite(grid) && grid > 0 ? grid : state.grid.scale;
+        const deltaXUnits = Math.round(interaction.deltaX / scale);
+        const deltaYUnits = Math.round(interaction.deltaY / scale);
         meta.entity.x = clamp((base.x || 0) + deltaXUnits, 0, 999);
         meta.entity.y = clamp((base.y || 0) + deltaYUnits, 0, 999);
       });
     });
   } else if (interaction.type === 'resize') {
-    const dxUnits = Math.round(interaction.deltaX / state.grid.scale);
-    const dyUnits = Math.round(interaction.deltaY / state.grid.scale);
-    if (dxUnits === 0 && dyUnits === 0) {
+    const hasResize = interaction.ids.some((id) => {
+      const grid = interaction.gridMap?.get(id) || interaction.gridScale || state.grid.scale;
+      const scale = Number.isFinite(grid) && grid > 0 ? grid : state.grid.scale;
+      const unitsX = Math.round(interaction.deltaX / scale);
+      const unitsY = Math.round(interaction.deltaY / scale);
+      return unitsX !== 0 || unitsY !== 0;
+    });
+    if (!hasResize) {
       state.interaction = null;
       return;
     }
@@ -1344,6 +1488,10 @@ function endInteraction(state, interaction) {
         if (!meta) {
           return;
         }
+        const grid = interaction.gridMap?.get(id) || interaction.gridScale || state.grid.scale;
+        const scale = Number.isFinite(grid) && grid > 0 ? grid : state.grid.scale;
+        const dxUnits = Math.round(interaction.deltaX / scale);
+        const dyUnits = Math.round(interaction.deltaY / scale);
         const result = applyResize(base, dxUnits, dyUnits, interaction.direction);
         meta.entity.x = result.x;
         meta.entity.y = result.y;

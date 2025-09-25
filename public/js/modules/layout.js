@@ -44,6 +44,7 @@ export function setupLayout(container, globals = {}) {
 
   container.dataset.layout = layout;
   container.style.padding = `${margin}px`;
+  container.style.boxSizing = 'border-box';
 
   if (layout === 'stack') {
     container.classList.add('flex', 'flex-col');
@@ -63,7 +64,7 @@ export function setupLayout(container, globals = {}) {
 
   applyThemeStyles(theme);
 
-  return layout;
+  return { layout, gap, margin, surface };
 }
 
 export function applyThemeStyles(theme = {}) {

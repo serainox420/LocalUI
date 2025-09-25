@@ -78,12 +78,14 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--ui-gap, 16px);
+  box-sizing: border-box;
 }
 
 .component-group-body[data-layout="stack"] {
   display: flex;
   flex-direction: column;
   gap: var(--ui-gap, 16px);
+  padding: 0;
 }
 
 .component-group-body[data-layout="freeform"] {
@@ -91,6 +93,9 @@ body {
   display: block;
   gap: 0;
   min-height: 100%;
+  padding: var(--ui-gap, 16px);
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .group-freeform-body {
