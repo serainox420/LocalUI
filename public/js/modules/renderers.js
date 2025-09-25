@@ -1,4 +1,4 @@
-import { normalizeLayout } from './layout.js';
+import { DEFAULT_GRID_SCALE, normalizeLayout } from './layout.js';
 
 export function createRenderer({ state, createResultView, playElementSound, server }) {
   const { polls, views, elementIndex } = state;
@@ -13,13 +13,13 @@ export function createRenderer({ state, createResultView, playElementSound, serv
       elementIndex.set(entity.id, entity);
     }
 
-    const parentLayout = context?.layout || 'grid';
+    const parentLayout = context?.layout || 'freeform';
 
     if (entity.type === 'group') {
       const group = buildGroup(entity, context);
-      applyPlacement(group.node, entity, parentLayout);
+      applyPlacement(group.node, entity, context);
       container.appendChild(group.node);
-      const nextContext = { layout: group.layout, globals: context?.globals };
+      const nextContext = { layout: group.layout, globals: context?.globals, grid: context?.grid };
       (entity.elements || []).forEach((child) => {
         renderEntity(child, group.body, nextContext);
       });
@@ -27,7 +27,7 @@ export function createRenderer({ state, createResultView, playElementSound, serv
     }
 
     const card = buildCard(entity);
-    applyPlacement(card, entity, parentLayout);
+    applyPlacement(card, entity, context);
     container.appendChild(card);
     activateElement(entity);
   }
@@ -75,53 +75,57 @@ export function createRenderer({ state, createResultView, playElementSound, serv
     const layout = normalizeLayout(group.layout);
     body.dataset.layout = layout;
 
-    if (layout === 'grid') {
-      body.classList.add('grid', 'auto-rows-min');
-      const columns = Math.max(1, Number(group.columns) || 0);
-      body.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`;
-    } else {
+    if (layout === 'stack') {
       body.classList.add('flex', 'flex-col');
-    }
-
-    const gapSource = group.gap ?? context?.globals?.theme?.gap ?? 8;
-    const gapValue = Number(gapSource);
-    if (Number.isFinite(gapValue)) {
-      body.style.gap = `${gapValue}px`;
+      const gapSource = group.gap ?? context?.globals?.theme?.gap ?? 8;
+      const gapValue = Number(gapSource);
+      if (Number.isFinite(gapValue)) {
+        body.style.gap = `${gapValue}px`;
+      }
+    } else {
+      body.classList.add('group-freeform-body');
+      body.style.position = 'relative';
+      body.style.gap = '';
     }
 
     section.appendChild(body);
     return { node: section, body, layout };
   }
 
-  function applyPlacement(node, item, parentLayout) {
-    if (!node || !item || parentLayout !== 'grid') {
-      if (node) {
-        node.style.removeProperty('grid-column-start');
-        node.style.removeProperty('grid-column-end');
-        node.style.removeProperty('grid-row-start');
-        node.style.removeProperty('grid-row-end');
-      }
+  function applyPlacement(node, item, context) {
+    if (!node || !item) {
       return;
     }
 
-    const spanW = Math.max(1, Number(item.w) || 0);
-    const spanH = Math.max(1, Number(item.h) || 0);
-    node.style.gridColumnEnd = `span ${spanW}`;
-    node.style.gridRowEnd = `span ${spanH}`;
+    node.style.removeProperty('grid-column-start');
+    node.style.removeProperty('grid-column-end');
+    node.style.removeProperty('grid-row-start');
+    node.style.removeProperty('grid-row-end');
 
-    const column = Number(item.x);
-    if (item.x != null && Number.isFinite(column)) {
-      node.style.gridColumnStart = column + 1;
-    } else {
-      node.style.removeProperty('grid-column-start');
+    const parentLayout = context?.layout || 'freeform';
+    if (parentLayout === 'stack') {
+      node.style.position = '';
+      node.style.left = '';
+      node.style.top = '';
+      node.style.width = '';
+      node.style.height = '';
+      return;
     }
 
-    const row = Number(item.y);
-    if (item.y != null && Number.isFinite(row)) {
-      node.style.gridRowStart = row + 1;
-    } else {
-      node.style.removeProperty('grid-row-start');
-    }
+    const grid = Number(context?.grid) || DEFAULT_GRID_SCALE;
+    const defaults = context?.globals?.defaults || {};
+    const widthUnits = Math.max(1, Number(item.w ?? defaults.w ?? 1));
+    const heightUnits = Math.max(1, Number(item.h ?? defaults.h ?? 1));
+    const xUnits = Number(item.x);
+    const yUnits = Number(item.y);
+    const leftUnits = Number.isFinite(xUnits) ? xUnits : 0;
+    const topUnits = Number.isFinite(yUnits) ? yUnits : 0;
+
+    node.style.position = 'absolute';
+    node.style.left = `${leftUnits * grid}px`;
+    node.style.top = `${topUnits * grid}px`;
+    node.style.width = `${widthUnits * grid}px`;
+    node.style.height = `${heightUnits * grid}px`;
   }
 
   function activateElement(element) {

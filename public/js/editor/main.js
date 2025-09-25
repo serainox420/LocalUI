@@ -1,10 +1,15 @@
 import { createAppState } from '../modules/state.js';
-import { setupLayout } from '../modules/layout.js';
+import {
+  DEFAULT_GRID_SCALE,
+  DEFAULT_SURFACE_HEIGHT,
+  DEFAULT_SURFACE_WIDTH,
+  normalizeSurface,
+  setupLayout,
+} from '../modules/layout.js';
 import { createOverlayManager } from '../modules/overlay.js';
 import { createResultViewFactory } from '../modules/presentation.js';
 import { createRenderer } from '../modules/renderers.js';
 
-const DEFAULT_GRID_SCALE = 48;
 const MIN_GRID_SCALE = 8;
 const MAX_GRID_SCALE = 160;
 const DRAG_START_THRESHOLD = 4;
@@ -115,6 +120,7 @@ export function createEditor(root, { config, baseConfig }) {
 }
 
 function createEditorState(initialConfig, baseConfig) {
+  const surfaceSettings = getSurfaceSettings(initialConfig?.globals);
   return {
     config: cloneConfig(initialConfig),
     baseConfig: cloneConfig(baseConfig),
@@ -122,7 +128,7 @@ function createEditorState(initialConfig, baseConfig) {
     locks: new Set(),
     clipboard: [],
     history: { past: [], future: [] },
-    grid: { enabled: true, scale: DEFAULT_GRID_SCALE },
+    grid: { enabled: true, scale: surfaceSettings.gridSize },
     overlay: null,
     dom: null,
     registry: new Map(),
@@ -138,6 +144,15 @@ function cloneConfig(value) {
     return structuredClone(value);
   }
   return JSON.parse(JSON.stringify(value));
+}
+
+function getSurfaceSettings(globals = {}) {
+  const normalized = normalizeSurface(globals?.surface || {});
+  return {
+    width: Math.max(1, Math.round(normalized.width || DEFAULT_SURFACE_WIDTH)),
+    height: Math.max(1, Math.round(normalized.height || DEFAULT_SURFACE_HEIGHT)),
+    gridSize: clamp(Math.round(normalized.gridSize || DEFAULT_GRID_SCALE), MIN_GRID_SCALE, MAX_GRID_SCALE),
+  };
 }
 
 function buildEditorLayout(root, state) {
@@ -189,14 +204,14 @@ function buildEditorLayout(root, state) {
   surfaceWrapper.className = 'editor-surface-wrapper relative flex-1';
 
   const surface = document.createElement('div');
-  surface.className = 'editor-surface relative mx-auto min-h-[720px] w-full max-w-[1200px] rounded-xl border border-slate-800 bg-slate-900 shadow-2xl';
+  surface.className = 'editor-surface relative mx-auto flex rounded-xl border border-slate-800 bg-slate-900 shadow-2xl';
 
   const gridLayer = document.createElement('div');
   gridLayer.className = 'editor-grid-layer pointer-events-none absolute inset-0 rounded-xl border border-slate-800/60';
   surface.appendChild(gridLayer);
 
   const uiHost = document.createElement('div');
-  uiHost.className = 'editor-ui-host pointer-events-auto relative z-10 min-h-full rounded-xl';
+  uiHost.className = 'editor-ui-host pointer-events-auto relative z-10 h-full w-full rounded-xl';
   surface.appendChild(uiHost);
 
   const cursorInfo = document.createElement('div');
@@ -345,8 +360,17 @@ function toggleGrid(state) {
 
 function adjustGridScale(state, delta) {
   const next = clamp(state.grid.scale + delta, MIN_GRID_SCALE, MAX_GRID_SCALE);
+  if (next === state.grid.scale) {
+    return;
+  }
   state.grid.scale = next;
-  updateGrid(state);
+  updateConfig(state, (config) => {
+    config.globals = config.globals || {};
+    config.globals.surface = config.globals.surface || {};
+    config.globals.surface.width = Number(config.globals.surface.width) || state.dom.surface.offsetWidth || DEFAULT_SURFACE_WIDTH;
+    config.globals.surface.height = Number(config.globals.surface.height) || state.dom.surface.offsetHeight || DEFAULT_SURFACE_HEIGHT;
+    config.globals.surface.gridSize = next;
+  });
 }
 
 function updateGrid(state) {
@@ -367,6 +391,25 @@ function updateGrid(state) {
   }
   if (state.grid.enabled) {
     updateMetricsInfo(state);
+  }
+}
+
+function applySurfaceDimensions(state, surfaceSettings) {
+  if (!state.dom) {
+    return;
+  }
+  const { surface, uiHost, gridLayer } = state.dom;
+  if (surface) {
+    surface.style.width = `${surfaceSettings.width}px`;
+    surface.style.height = `${surfaceSettings.height}px`;
+  }
+  if (gridLayer) {
+    gridLayer.style.width = '100%';
+    gridLayer.style.height = '100%';
+  }
+  if (uiHost) {
+    uiHost.style.width = '100%';
+    uiHost.style.height = '100%';
   }
 }
 
@@ -453,18 +496,31 @@ function render(state) {
   });
 
   const globals = state.config.globals || {};
-  const layout = setupLayout(uiHost, globals);
-  if (layout === 'grid') {
-    uiHost.classList.add('editor-grid-layout');
-    uiHost.style.gridTemplateColumns = 'repeat(12, minmax(0, 1fr))';
-    uiHost.style.gridAutoRows = `${state.grid.scale}px`;
+  const surfaceSettings = getSurfaceSettings(globals);
+  state.grid.scale = surfaceSettings.gridSize;
+  applySurfaceDimensions(state, surfaceSettings);
+
+  const normalizedGlobals = {
+    ...globals,
+    surface: {
+      ...(globals.surface || {}),
+      width: surfaceSettings.width,
+      height: surfaceSettings.height,
+      gridSize: surfaceSettings.gridSize,
+    },
+  };
+
+  const layout = setupLayout(uiHost, normalizedGlobals);
+  uiHost.dataset.layout = layout;
+  if (layout === 'stack') {
+    uiHost.style.width = '';
+    uiHost.style.height = '';
   } else {
-    uiHost.classList.remove('editor-grid-layout');
-    uiHost.style.gridTemplateColumns = '';
-    uiHost.style.gridAutoRows = '';
+    uiHost.style.width = '100%';
+    uiHost.style.height = '100%';
   }
 
-  const context = { layout, globals };
+  const context = { layout, globals: normalizedGlobals, grid: surfaceSettings.gridSize };
   (state.config.elements || []).forEach((element) => {
     renderer.renderEntity(element, uiHost, context);
   });
@@ -622,7 +678,9 @@ function addResizeHandles(state, node, id) {
     });
     host.appendChild(handle);
   });
-  node.style.position = 'relative';
+  if (!node.style.position) {
+    node.style.position = 'relative';
+  }
   node.appendChild(host);
 }
 
@@ -1436,6 +1494,7 @@ function openStyleEditor(state) {
   const theme = globals.theme || {};
   const palette = theme.palette || {};
   const defaults = globals.defaults || {};
+  const surface = globals.surface || {};
 
   const form = document.createElement('form');
   form.className = 'flex flex-col gap-4';
@@ -1474,6 +1533,23 @@ function openStyleEditor(state) {
   );
   form.appendChild(defaultsSection);
 
+  const surfaceSection = document.createElement('div');
+  surfaceSection.className = 'rounded-lg border border-slate-700 bg-slate-800/40 p-4';
+  const surfaceTitle = document.createElement('h3');
+  surfaceTitle.className = 'mb-2 text-sm font-semibold uppercase tracking-wider text-slate-300';
+  surfaceTitle.textContent = 'Design surface';
+  const surfaceWidthInput = createNumberInput(surface.width ?? DEFAULT_SURFACE_WIDTH, 1);
+  const surfaceHeightInput = createNumberInput(surface.height ?? DEFAULT_SURFACE_HEIGHT, 1);
+  const surfaceGridInput = createNumberInput(surface.gridSize ?? state.grid.scale ?? DEFAULT_GRID_SCALE, MIN_GRID_SCALE);
+  surfaceGridInput.max = String(MAX_GRID_SCALE);
+  surfaceSection.append(
+    surfaceTitle,
+    createField('Surface width (px)', surfaceWidthInput),
+    createField('Surface height (px)', surfaceHeightInput),
+    createField('Grid size (px)', surfaceGridInput, `Snap size between ${MIN_GRID_SCALE}px and ${MAX_GRID_SCALE}px`),
+  );
+  form.appendChild(surfaceSection);
+
   const customCss = createTextArea(theme.customCss || '', 5);
   customCss.placeholder = 'Optional raw CSS/Tailwind snippets to include globally';
   form.appendChild(createField('Custom CSS / Tailwind helpers', customCss));
@@ -1510,6 +1586,15 @@ function openStyleEditor(state) {
       config.globals.defaults.w = Number(defaultWidth.value) || 1;
       config.globals.defaults.h = Number(defaultHeight.value) || 1;
       config.globals.defaults.classes = defaultClasses.value || '';
+      const nextSurface = config.globals.surface || {};
+      const widthValue = Math.max(1, Number(surfaceWidthInput.value) || DEFAULT_SURFACE_WIDTH);
+      const heightValue = Math.max(1, Number(surfaceHeightInput.value) || DEFAULT_SURFACE_HEIGHT);
+      const gridValue = clamp(Number(surfaceGridInput.value) || DEFAULT_GRID_SCALE, MIN_GRID_SCALE, MAX_GRID_SCALE);
+      nextSurface.width = widthValue;
+      nextSurface.height = heightValue;
+      nextSurface.gridSize = gridValue;
+      config.globals.surface = nextSurface;
+      state.grid.scale = gridValue;
     });
     close();
     state.overlay?.showNotification('Styles updated', { tone: 'success', timeoutMs: 1600 });

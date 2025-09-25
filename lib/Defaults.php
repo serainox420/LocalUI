@@ -19,6 +19,11 @@ class Defaults
                     'gap' => 8,
                     'layout' => 'grid',
                 ],
+                'surface' => [
+                    'width' => 1200,
+                    'height' => 720,
+                    'gridSize' => 48,
+                ],
                 'defaults' => [
                     'w' => 12,
                     'h' => 2,

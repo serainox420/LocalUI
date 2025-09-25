@@ -1,5 +1,5 @@
 import { createAppState } from './state.js';
-import { setupLayout } from './layout.js';
+import { getSurfaceGridSize, normalizeSurface, setupLayout } from './layout.js';
 import { createOverlayManager } from './overlay.js';
 import { createResultViewFactory } from './presentation.js';
 import { createRenderer } from './renderers.js';
@@ -19,8 +19,13 @@ export function initializeApp(root, config) {
   });
 
   const globals = config.globals || {};
-  const rootLayout = setupLayout(root, globals);
-  const rootContext = { layout: rootLayout, globals };
+  const normalizedGlobals = {
+    ...globals,
+    surface: normalizeSurface(globals.surface || {}),
+  };
+  const rootLayout = setupLayout(root, normalizedGlobals);
+  const gridSize = getSurfaceGridSize(normalizedGlobals);
+  const rootContext = { layout: rootLayout, globals: normalizedGlobals, grid: gridSize };
 
   (config.elements || []).forEach((element) => {
     renderer.renderEntity(element, root, rootContext);

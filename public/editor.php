@@ -17,6 +17,8 @@ $fontStack = $config['globals']['theme']['font'] ?? '\'JetBrainsMono Nerd Font\'
 $primary = $config['globals']['theme']['palette']['primary'] ?? '#111827';
 $accent = $config['globals']['theme']['palette']['accent'] ?? '#10B981';
 $surface = $config['globals']['theme']['palette']['surface'] ?? '#F8FAFC';
+$muted = $config['globals']['theme']['palette']['muted'] ?? '#94A3B8';
+$danger = $config['globals']['theme']['palette']['danger'] ?? '#F87171';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -32,6 +34,8 @@ $surface = $config['globals']['theme']['palette']['surface'] ?? '#F8FAFC';
             --primary-color: <?= htmlspecialchars($primary, ENT_QUOTES, 'UTF-8'); ?>;
             --accent-color: <?= htmlspecialchars($accent, ENT_QUOTES, 'UTF-8'); ?>;
             --surface-color: <?= htmlspecialchars($surface, ENT_QUOTES, 'UTF-8'); ?>;
+            --muted-color: <?= htmlspecialchars($muted, ENT_QUOTES, 'UTF-8'); ?>;
+            --danger-color: <?= htmlspecialchars($danger, ENT_QUOTES, 'UTF-8'); ?>;
         }
         body {
             font-family: <?= htmlspecialchars($fontStack, ENT_QUOTES, 'UTF-8'); ?>;
