@@ -15,19 +15,32 @@
 }
 
 .editor-input {
-  background-color: rgba(15, 23, 42, 0.75);
+  background-color: rgba(15, 23, 42, 0.92) !important;
   border: 1px solid rgba(71, 85, 105, 0.8);
   border-radius: 0.5rem;
   padding: 0.5rem 0.75rem;
-  color: #e2e8f0;
+  color: #e2e8f0 !important;
   font-size: 0.9rem;
   outline: none;
-  transition: border-color 120ms ease, box-shadow 120ms ease;
+  box-shadow: 0 0 0 1px rgba(71, 85, 105, 0.35);
+  transition: border-color 120ms ease, box-shadow 120ms ease, background-color 160ms ease;
+}
+
+.editor-input::placeholder {
+  color: rgba(148, 163, 184, 0.85);
 }
 
 .editor-input:focus {
   border-color: rgba(56, 189, 248, 0.85);
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+  background-color: rgba(15, 23, 42, 0.98) !important;
+}
+
+.editor-input:-webkit-autofill,
+.editor-input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px rgba(15, 23, 42, 0.98) inset;
+  box-shadow: 0 0 0px 1000px rgba(15, 23, 42, 0.98) inset;
+  -webkit-text-fill-color: #e2e8f0;
 }
 
 .editor-entity {
