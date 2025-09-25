@@ -14,6 +14,8 @@
   --primary-color: #4338ca;
   --accent-color: #8b5cf6;
   --ui-fade-duration: 420ms;
+  --ui-gap: 16px;
+  --ui-margin: 24px;
 }
 
 body {
@@ -33,16 +35,25 @@ body {
   box-shadow: var(--shadow-strong);
   backdrop-filter: blur(18px);
   transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-gap, 16px);
+  padding: calc(var(--ui-gap, 16px) * 1.25);
+  box-sizing: border-box;
 }
 
 .component-group {
   border-radius: 1.35rem;
-  padding: 1.35rem;
+  padding: calc(var(--ui-gap, 16px) * 1.35);
   background: transparent;
   border: 1px solid transparent;
   box-shadow: none;
   backdrop-filter: none;
   transition: border-color 0.2s ease, box-shadow 0.25s ease, background 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--ui-gap, 16px) * 0.75);
+  box-sizing: border-box;
 }
 
 .component-group-pane {
@@ -58,24 +69,39 @@ body {
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--text-secondary);
-  margin-bottom: 0.75rem;
+  margin: 0;
 }
 
 .component-group-body {
   min-height: 0;
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-gap, 16px);
 }
 
 .component-group-body[data-layout="stack"] {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--ui-gap, 16px);
 }
 
 .component-group-body[data-layout="freeform"] {
   position: relative;
   display: block;
+  gap: 0;
   min-height: 100%;
+}
+
+.group-freeform-body {
+  position: relative;
+  min-height: 100%;
+}
+
+.component-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--ui-gap, 16px) * 0.75);
 }
 
 .ui-freeform-surface {
@@ -95,6 +121,7 @@ body {
 
 .component-card header {
   letter-spacing: 0.2em;
+  margin: 0;
 }
 
 .component-card[data-state="error"] {
@@ -107,9 +134,10 @@ body {
   font-family: 'JetBrainsMono Nerd Font', 'JetBrains Mono', 'Fira Code', 'SFMono-Regular', ui-monospace, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 }
 
+
 .result-inline {
   border-top: 1px solid rgba(148, 163, 184, 0.18);
-  padding-top: 0.75rem;
+  padding-top: calc(var(--ui-gap, 16px) * 0.75);
 }
 
 .result-block {
@@ -117,7 +145,7 @@ body {
   color: var(--text-primary);
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 1rem;
-  padding: 0.85rem;
+  padding: calc(var(--ui-gap, 16px) * 0.85);
   max-height: 18rem;
   overflow: auto;
   white-space: pre-wrap;
@@ -135,7 +163,7 @@ body {
   background: rgba(248, 113, 113, 0.12);
   color: #fecaca;
   border-radius: 0.9rem;
-  padding: 0.75rem 1rem;
+  padding: calc(var(--ui-gap, 16px) * 0.75) calc(var(--ui-gap, 16px));
   font-size: 0.8rem;
 }
 
@@ -184,12 +212,12 @@ body {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: calc(var(--ui-gap, 16px) * 0.75);
   background: rgba(15, 23, 42, 0.92);
   border: 1px solid var(--surface-border-strong);
   border-radius: 1rem;
   box-shadow: var(--shadow-strong);
-  padding: 1.1rem 1.25rem;
+  padding: calc(var(--ui-gap, 16px)) calc(var(--ui-gap, 16px) * 1.1);
   pointer-events: auto;
   color: var(--text-primary);
 }
@@ -206,8 +234,18 @@ body {
 .ui-surface-body {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: calc(var(--ui-gap, 16px) * 0.75);
   font-size: 0.9rem;
+}
+
+.ui-notification-host {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--ui-gap, 16px) * 0.75);
+}
+
+.ui-modal-scrim {
+  padding: calc(var(--ui-gap, 16px) * 1.5);
 }
 
 .ui-surface-close {

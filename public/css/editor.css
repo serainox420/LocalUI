@@ -47,6 +47,7 @@
   position: relative;
   border-radius: 0.75rem;
   transition: outline 120ms ease, transform 120ms ease;
+  cursor: move;
 }
 
 .editor-entity.editor-hovered:not(.editor-selected) {
@@ -88,24 +89,37 @@
   display: block;
 }
 
+.editor-root .editor-entity button,
+.editor-root .editor-entity .ui-button,
+.editor-root .editor-entity input,
+.editor-root .editor-entity textarea,
+.editor-root .editor-entity select,
+.editor-root .editor-entity label {
+  pointer-events: none;
+}
+
 .editor-handle-nw {
   top: 0;
   left: 0;
+  cursor: nwse-resize;
 }
 
 .editor-handle-ne {
   top: 0;
   right: 0;
+  cursor: nesw-resize;
 }
 
 .editor-handle-sw {
   bottom: 0;
   left: 0;
+  cursor: nesw-resize;
 }
 
 .editor-handle-se {
   bottom: 0;
   right: 0;
+  cursor: nwse-resize;
 }
 
 .editor-ghost-layer {

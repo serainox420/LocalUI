@@ -1,6 +1,7 @@
-export const DEFAULT_GRID_SCALE = 48;
 export const DEFAULT_SURFACE_WIDTH = 1200;
 export const DEFAULT_SURFACE_HEIGHT = 720;
+export const DEFAULT_SURFACE_COLUMNS = 12;
+export const DEFAULT_GRID_SCALE = Math.round(DEFAULT_SURFACE_WIDTH / DEFAULT_SURFACE_COLUMNS);
 
 export function normalizeLayout(value) {
   if (value === 'stack') {
@@ -12,13 +13,34 @@ export function normalizeLayout(value) {
   return 'freeform';
 }
 
+function resolveSpacing(value, fallback = 0) {
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric >= 0) {
+    return numeric;
+  }
+  return fallback;
+}
+
 export function setupLayout(container, globals = {}) {
   container.className = '';
   const theme = globals.theme || {};
   const layout = normalizeLayout(theme.layout);
-  const gap = theme.gap ?? 8;
-  const margin = theme.margins ?? 12;
-  const surface = normalizeSurface(globals.surface);
+  const gap = resolveSpacing(theme.gap, 16);
+  const margin = resolveSpacing(theme.margins, 24);
+  const surface = normalizeSurface(globals.surface || {});
+
+  const docRoot = document.documentElement;
+  if (docRoot) {
+    docRoot.style.setProperty('--ui-gap', `${gap}px`);
+    docRoot.style.setProperty('--ui-margin', `${margin}px`);
+  }
+  if (document.body) {
+    document.body.style.setProperty('--ui-gap', `${gap}px`);
+    document.body.style.setProperty('--ui-margin', `${margin}px`);
+  }
+
+  container.style.setProperty('--ui-gap', `${gap}px`);
+  container.style.setProperty('--ui-margin', `${margin}px`);
 
   container.dataset.layout = layout;
   container.style.padding = `${margin}px`;
@@ -73,18 +95,40 @@ function applyRootColor(root, variable, value) {
   }
 }
 
+function resolveDimension(value, fallback) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : fallback;
+}
+
+function resolveGridSize(gridSize, widthFallback) {
+  const numeric = Number(gridSize);
+  if (Number.isFinite(numeric) && numeric > 0) {
+    return { value: numeric, explicit: true };
+  }
+  const derived = Math.round(widthFallback / DEFAULT_SURFACE_COLUMNS);
+  const value = Number.isFinite(derived) && derived > 0 ? derived : DEFAULT_GRID_SCALE;
+  return { value, explicit: false };
+}
+
 export function normalizeSurface(surface = {}) {
-  const width = Number(surface.width);
-  const height = Number(surface.height);
-  const gridSize = Number(surface.gridSize);
-  return {
-    width: Number.isFinite(width) && width > 0 ? width : DEFAULT_SURFACE_WIDTH,
-    height: Number.isFinite(height) && height > 0 ? height : DEFAULT_SURFACE_HEIGHT,
-    gridSize: Number.isFinite(gridSize) && gridSize > 0 ? gridSize : DEFAULT_GRID_SCALE,
-  };
+  const width = resolveDimension(surface?.width, DEFAULT_SURFACE_WIDTH);
+  const height = resolveDimension(surface?.height, DEFAULT_SURFACE_HEIGHT);
+  const columnsCandidate = Number(surface?.columns);
+  const columns = Number.isFinite(columnsCandidate) && columnsCandidate > 0 ? columnsCandidate : DEFAULT_SURFACE_COLUMNS;
+  const grid = resolveGridSize(surface?.gridSize, width);
+  return { width, height, gridSize: grid.value, gridExplicit: grid.explicit, columns };
 }
 
 export function getSurfaceGridSize(globals = {}, fallback = DEFAULT_GRID_SCALE) {
   const surface = normalizeSurface(globals.surface || {});
+  const gap = resolveSpacing(globals?.theme?.gap, 0);
+  if (!surface.gridExplicit) {
+    const totalGap = gap * Math.max(0, (surface.columns || DEFAULT_SURFACE_COLUMNS) - 1);
+    const availableWidth = surface.width - totalGap;
+    const derived = availableWidth / Math.max(1, surface.columns || DEFAULT_SURFACE_COLUMNS);
+    if (Number.isFinite(derived) && derived > 0) {
+      return derived;
+    }
+  }
   return surface.gridSize || fallback;
 }
