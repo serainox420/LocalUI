@@ -64,9 +64,28 @@ body {
 .component-group-body {
   min-height: 0;
   width: 100%;
+}
+
+.component-group-body[data-layout="stack"] {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.component-group-body[data-layout="freeform"] {
+  position: relative;
+  display: block;
+  min-height: 100%;
+}
+
+.ui-freeform-surface {
+  position: relative;
+  overflow: visible;
+}
+
+.ui-freeform-surface [data-element-id],
+.ui-freeform-surface [data-group-id] {
+  position: absolute;
 }
 
 .component-card:hover {
