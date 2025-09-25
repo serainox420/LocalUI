@@ -605,6 +605,7 @@ function decorateNode(state, node) {
     showContextMenu(state, event, id);
   });
   node.addEventListener('pointerdown', (event) => {
+    event.stopPropagation();
     if (event.button !== 0) {
       return;
     }
@@ -1096,6 +1097,7 @@ function startMoveInteraction(state, event, id, previewEvent = null) {
     state.overlay?.showNotification('Selection is locked', { tone: 'info', timeoutMs: 1500 });
     return;
   }
+  clearHoverState(state);
   event.preventDefault();
   const { layer, ghosts } = createGhostLayer(state, movable);
   const initialPositions = new Map();
@@ -1164,6 +1166,7 @@ function startResizeInteraction(state, event, id, direction) {
     state.overlay?.showNotification('Selection is locked', { tone: 'info', timeoutMs: 1500 });
     return;
   }
+  clearHoverState(state);
   event.preventDefault();
   const { layer, ghosts } = createGhostLayer(state, resizable);
   const initialSizes = new Map();
@@ -1293,6 +1296,7 @@ function adjustGhostFrame(frame, dx, dy, direction) {
 
 function endInteraction(state, interaction) {
   interaction.layer.remove();
+  clearHoverState(state);
   if (interaction.type === 'move') {
     const deltaXUnits = Math.round(interaction.deltaX / state.grid.scale);
     const deltaYUnits = Math.round(interaction.deltaY / state.grid.scale);
@@ -1334,6 +1338,11 @@ function endInteraction(state, interaction) {
     });
   }
   state.interaction = null;
+}
+
+function clearHoverState(state) {
+  const hovered = state.dom?.uiHost?.querySelectorAll('.editor-entity.editor-hovered') || [];
+  hovered.forEach((node) => node.classList.remove('editor-hovered'));
 }
 
 function applyResize(base, dxUnits, dyUnits, direction) {
