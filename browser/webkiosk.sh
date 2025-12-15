@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-URL="https://example.com"
+URL="https://localhost:2137"
 BROWSER="chromium"    # chromium|thorium|google-chrome|brave|firefox|custom
 INCOGNITO=1
 APP_MODE=1
