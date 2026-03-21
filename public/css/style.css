@@ -1,0 +1,192 @@
+/* public/css/style.css */
+:root {
+  color-scheme: dark;
+  --surface-color: #0A101F;
+  --surface-elevated: #111827;
+  --surface-border: #3E4C66;
+  --surface-border-strong: #5A6A8A;
+  --text-primary: #F0F2F5;
+  --text-secondary: #BCC9D9;
+  --danger-color: #EF4444;
+  --primary-color: #4F46E5;
+  --accent-color: #7C3AED;
+}
+
+body {
+  background-color: var(--surface-color);
+  color: var(--text-primary);
+  min-height: 100vh;
+  font-family: inherit;
+}
+
+.component-card {
+  background: var(--surface-elevated);
+  border: 1px solid var(--surface-border);
+  border-radius: 0.5rem;
+}
+
+.component-group {
+  border-radius: 0.75rem;
+  padding: 1rem;
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.component-group-pane {
+  border-color: var(--surface-border);
+  background: var(--surface-elevated);
+}
+
+.component-group-header {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.component-group-body {
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.component-card header {
+  letter-spacing: 0.1em;
+}
+
+.component-card[data-state="error"] {
+  border-color: var(--danger-color);
+}
+
+.component-card pre,
+.result-block {
+  font-family: 'JetBrainsMono Nerd Font', 'JetBrains Mono', 'Fira Code', 'SFMono-Regular', ui-monospace, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+}
+
+.result-inline {
+  border-top: 1px solid var(--surface-border);
+  padding-top: 0.5rem;
+}
+
+.result-block {
+  background: #0D1426;
+  color: var(--text-secondary);
+  border: 1px solid var(--surface-border);
+  border-radius: 0.25rem;
+  padding: 0.75rem;
+  max-height: 20rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.result-block-error {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: var(--danger-color);
+  color: #FECACA;
+}
+
+.result-error {
+  border: 1px solid var(--danger-color);
+  background: rgba(239, 68, 68, 0.1);
+  color: #FECACA;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.ui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.25rem;
+  border: 1px solid transparent;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ui-button:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.ui-button-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #ffffff;
+}
+
+.ui-button-primary:hover {
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+.ui-button-ghost {
+  background: transparent;
+  border-color: var(--surface-border);
+  color: var(--text-primary);
+}
+
+.ui-button-ghost:hover {
+  border-color: var(--accent-color);
+  background: rgba(148, 163, 184, 0.1);
+}
+
+.ui-surface {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--surface-elevated);
+  border: 1px solid var(--surface-border-strong);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  pointer-events: auto;
+  color: var(--text-primary);
+}
+
+.ui-fadeable {
+  opacity: 1;
+}
+
+.ui-fadeable.is-fading {
+  opacity: 0;
+}
+
+.ui-surface-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.ui-surface-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ui-surface-close:hover {
+  color: #ffffff;
+}
+
+.ui-modal-scrim {
+  background: rgba(2, 6, 23, 0.8);
+}
+
+.ui-modal-panel {
+  width: min(90vw, 1024px);
+  max-height: 90vh;
+  overflow: auto;
+}

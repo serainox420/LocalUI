@@ -50,10 +50,10 @@ class Core
         return self::$config;
     }
 
-    public static function getConfig(): array
+    public static function getConfig(?string $path = null): array
     {
         if (!self::$config) {
-            self::init();
+            self::init($path);
         }
         return self::$config;
     }

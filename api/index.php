@@ -2,8 +2,12 @@
 require_once __DIR__ . '/../lib/Core.php';
 require_once __DIR__ . '/../lib/Exec.php';
 
+// Start session to get the config file path
+session_start();
+$configFile = $_SESSION['config_file'] ?? null;
+
 try {
-    Core::init();
+    Core::init($configFile);
 } catch (Throwable $e) {
     Core::sendError($e->getMessage(), 500);
 }

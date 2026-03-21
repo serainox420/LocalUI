@@ -1,10 +1,19 @@
 <?php
 require_once __DIR__ . '/../lib/Core.php';
 
+// Use query parameters to get the config and style
+$configFile = $_GET['config'] ?? null;
+$styleFile = $_GET['style'] ?? '/css/custom.css';
+
+// Start a session to store the config file path
+session_start();
+$_SESSION['config_file'] = $configFile;
+
 $error = null;
 $config = [];
 try {
-    $config = Core::getConfig();
+    // Pass the config file to getConfig
+    $config = Core::getConfig($configFile);
 } catch (Throwable $e) {
     $error = $e->getMessage();
 }
@@ -22,7 +31,7 @@ $surface = $config['globals']['theme']['palette']['surface'] ?? '#F8FAFC';
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>LocalUI</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
-    <link rel="stylesheet" href="/css/custom.css">
+    <link rel="stylesheet" href="<?= htmlspecialchars($styleFile, ENT_QUOTES, 'UTF-8'); ?>">
     <style>
         :root {
             --primary-color: <?= htmlspecialchars($primary, ENT_QUOTES, 'UTF-8'); ?>;

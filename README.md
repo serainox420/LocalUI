@@ -18,32 +18,22 @@ Additional ready-to-run layouts are available in `config/`. Screenshots for each
 - [`ui.triage.json`](config/ui.triage.json) — incident triage workspace with stacked status blocks, log tooling, and safety toggles.
 - [`ui.workspace.json`](config/ui.workspace.json) — repository-focused cockpit with project summaries, environment checks, and repository utilities.
 
-Swap any of them into place with:
-
-```sh
-cp config/ui.operations.json config/ui.json
-```
-
-Then reload the browser to explore the layout.
-
-
-## Requirements
-- PHP 8.1 or newer with `proc_open` enabled
-- Web browser with JavaScript enabled
-
-## Setup
-1. Clone this repository or download the sources.
-2. Copy the sample UI configuration to `config/ui.json` and adjust to your needs:
-   ```sh
-   cp config/ui.sample.json config/ui.json
-   ```
-3. Update the whitelist and element command templates in `config/ui.json` to match the binaries you intend to run.
-
 ## Running the web server
+
+To start the LocalUI, run the `main.sh` script:
+
 ```sh
-php -S localhost:8000 -t public
+./main.sh
 ```
-Then open [http://localhost:8000](http://localhost:8000) in your browser.
+
+This will open an interactive menu that allows you to:
+
+- **Start UI**:
+  - Select a UI configuration from the `config/` directory.
+  - Select a stylesheet from the `public/css/` directory.
+  - Set a port for the web server.
+- **Stop UI**:
+  - Stop a running PHP server process.
 
 ## API endpoints
 - `POST /api/run` — Trigger a command. Payload example: `{ "id": "envOut", "commandId": "printEnv", "args": { "value": "optional" } }`
@@ -66,7 +56,7 @@ Responses include:
 ```
 
 ## Configuration schema
-Create `config/ui.json` following the structure below. Each element describes a control rendered by the UI. Commands with `${value}` placeholders are substituted with runtime values and executed only if the binary is present in the whitelist.
+Create your own `.json` files in the `config/` directory following the structure below. Each element describes a control rendered by the UI. Commands with `${value}` placeholders are substituted with runtime values and executed only if the binary is present in the whitelist.
 
 ```json
 {
